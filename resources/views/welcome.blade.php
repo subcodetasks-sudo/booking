@@ -129,7 +129,7 @@
                 <div class="form-section-title" id="step-2-title"> الإضافات والطلبات</div>
                 <div class="addons-list" id="addons-list"></div>
                 <div class="summary-box"><div class="summary-line"><span id="addons-summary-label">ملخص الإضافات</span><span id="addons-summary">لا توجد إضافات</span></div><div class="summary-line"><span id="addons-total-label">إجمالي الإضافات</span><strong id="addons-total">0 AED</strong></div></div>
-                <div class="actions"><button id="back-to-1" class="btn btn-secondary" type="button">رجوع</button><button id="skip-step-2" class="btn btn-secondary" type="button">تخطي</button><button id="to-step-3" class="btn" type="button">متابعة</button></div>
+                <div class="actions actions-step-footer"><button id="back-to-1" class="btn btn-secondary" type="button">رجوع</button><button id="skip-step-2" class="btn btn-secondary" type="button">تخطي</button><button id="to-step-3" class="btn" type="button">متابعة</button></div>
             </div>
 
             <div id="step-3" class="hidden">
