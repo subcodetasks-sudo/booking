@@ -13,7 +13,12 @@ return [
     |
     */
 
-    'default' => env('QUEUE_CONNECTION', 'database'),
+    /*
+    | Use "sync" by default when you cannot run `php artisan queue:work`
+    | (Filament DB notifications already send synchronously). Set QUEUE_CONNECTION
+    | to database/redis on servers where a queue worker runs.
+    */
+    'default' => env('QUEUE_CONNECTION', 'sync'),
 
     /*
     |--------------------------------------------------------------------------
