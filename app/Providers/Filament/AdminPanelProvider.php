@@ -4,6 +4,7 @@ namespace App\Providers\Filament;
 
 use App\Filament\Widgets\TodayOverviewStats;
 use App\Filament\Widgets\TodayReservationsTable;
+use App\Filament\Widgets\SchedulingCalendarWidget;
 use App\Http\Middleware\SetPanelLocale;
 use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
@@ -55,6 +56,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([
                 TodayOverviewStats::class,
+                SchedulingCalendarWidget::class,
                 TodayReservationsTable::class,
             ])
             ->middleware([

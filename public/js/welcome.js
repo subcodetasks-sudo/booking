@@ -86,6 +86,41 @@ function minutesToSlot(totalMin) {
     return `${padTime(h)}:${padTime(m)}`;
 }
 
+function normalizeSlotTime(value) {
+    const match = String(value || '').trim().match(/^(\d{1,2}):(\d{2})/);
+    if (!match) {
+        return '';
+    }
+
+    return `${padTime(Number(match[1]))}:${padTime(Number(match[2]))}`;
+}
+
+function selectAvailableSlot(slot) {
+    const gridAvail = document.getElementById('slot-grid-available');
+    if (!gridAvail || !slot) {
+        return false;
+    }
+
+    const btn = [...gridAvail.querySelectorAll('button.slot-card-available')]
+        .find((item) => item.dataset.slot === slot);
+    if (!btn) {
+        return false;
+    }
+
+    gridAvail.querySelectorAll('button.slot-card-available').forEach((item) => {
+        item.classList.remove('active');
+    });
+    btn.classList.add('active');
+    selectedSlot = slot;
+
+    const timeInput = document.getElementById('reservation_time');
+    if (timeInput && normalizeSlotTime(timeInput.value) !== slot) {
+        timeInput.value = slot;
+    }
+
+    return true;
+}
+
 function getOperatingSlotTimes() {
     const list = [];
     for (let t = SLOT_DAY_START_MIN; t <= SLOT_DAY_END_MIN; t += SLOT_STEP_MIN) {
@@ -132,12 +167,13 @@ async function getAvailabilityForDate(dateStr) {
 
 const SLOT_BOOKING_META_ICON = '<svg class="slot-info-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.35"/><path d="M12 16v-5M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
-async function renderSlotGrid(dateStr, preserveSelection = false) {
+async function renderSlotGrid(dateStr, preserveSelection = false, showPreferredTimeError = false) {
     const gridAvail = document.getElementById('slot-grid-available');
     const gridBook = document.getElementById('slot-grid-booked');
     const emptyAvail = document.getElementById('slot-available-empty');
     const emptyBook = document.getElementById('slot-booked-empty');
     const dateLine = document.getElementById('availability-date-line');
+    const timeInput = document.getElementById('reservation_time');
 
     if (!gridAvail || !gridBook) {
         return;
@@ -181,10 +217,14 @@ async function renderSlotGrid(dateStr, preserveSelection = false) {
     selectedSlot = '';
     const unavailableSet = new Set(booked);
     if (preserveSelection && prev && !unavailableSet.has(prev)) {
-        const btn = gridAvail.querySelector(`button.slot-card-available[data-slot="${prev}"]`);
-        if (btn) {
-            btn.classList.add('active');
-            selectedSlot = prev;
+        selectAvailableSlot(prev);
+    } else {
+        const preferredTime = normalizeSlotTime(timeInput?.value || '');
+        if (preferredTime && available.includes(preferredTime)) {
+            selectAvailableSlot(preferredTime);
+            clearFieldError(timeInput);
+        } else if (showPreferredTimeError && preferredTime && unavailableSet.has(preferredTime)) {
+            setFieldError(timeInput, i18n[currentLang].valPreferredSlotBooked);
         }
     }
 }
@@ -475,6 +515,9 @@ const i18n = {
         feature3Sub: 'إضافات مرتبطة بالمناسبة',
         feature4Title: 'WhatsApp',
         feature4Sub: 'إرسال تفاصيل الحجز للمطعم',
+        qrKicker: 'امسح الكود',
+        qrTitle: 'أطلع علي الأضناف والوجبات الان',
+        qrSub: 'شارك صفحة المنيو مع ضيوفك أو افتحها مباشرة من الجوال.',
         stepperAria: 'خطوات الحجز',
         socialFabAria: 'روابط التواصل الاجتماعي',
         allergyMain: 'القيود الغذائية',
@@ -513,6 +556,7 @@ const i18n = {
         valDateFuture: 'تاريخ الحجز يجب أن يكون اليوم أو تاريخًا مستقبليًا.',
         valPickSlotFromList: 'اختر وقتًا متاحًا أولاً من قائمة المواعيد.',
         valPickSlotFirst: 'اختر وقتًا متاحًا أولاً.',
+        valPreferredSlotBooked: 'الوقت المختار محجوز. اختر وقتًا متاحًا آخر.',
         valPleaseEnterDate: 'يرجى إدخال التاريخ.',
         valPleaseEnterTime: 'يرجى إدخال الوقت.',
         valPleaseEnterGuests: 'يرجى إدخال عدد الأفراد.',
@@ -520,6 +564,7 @@ const i18n = {
         valPleaseEnterPhone: 'يرجى إدخال رقم الجوال.',
         valAcceptPolicy: 'يجب الموافقة على سياسة الحجز.',
         errorSaveBooking: 'تعذر حفظ الحجز. تحقق من الاتصال أو حاول لاحقًا.',
+        errorSessionExpired: 'انتهت صلاحية الجلسة. حدّث الصفحة ثم حاول مرة أخرى.',
         waTitle: '*طلب حجز جديد*',
         waName: 'الاسم',
         waPhone: 'الهاتف',
@@ -574,6 +619,9 @@ const i18n = {
         feature3Sub: 'Add-ons that match your occasion',
         feature4Title: 'WhatsApp',
         feature4Sub: 'Send booking details to the restaurant',
+        qrKicker: 'Scan the code',
+        qrTitle: 'Open La Cucina website quickly',
+        qrSub: 'Share the booking page with guests or open it directly on mobile.',
         stepperAria: 'Booking steps',
         socialFabAria: 'Social media links',
         allergyMain: 'Dietary restrictions',
@@ -613,6 +661,7 @@ const i18n = {
         valDateFuture: 'Reservation date must be today or in the future.',
         valPickSlotFromList: 'Choose an available time from the list first.',
         valPickSlotFirst: 'Choose an available time first.',
+        valPreferredSlotBooked: 'The selected time is booked. Choose another available time.',
         valPleaseEnterDate: 'Please enter the date.',
         valPleaseEnterTime: 'Please enter the time.',
         valPleaseEnterGuests: 'Please enter the party size.',
@@ -620,6 +669,7 @@ const i18n = {
         valPleaseEnterPhone: 'Please enter your mobile number.',
         valAcceptPolicy: 'Please accept the booking policy.',
         errorSaveBooking: 'Could not save the booking. Check your connection or try again.',
+        errorSessionExpired: 'Your session expired. Refresh the page and try again.',
         waTitle: '*New booking request*',
         waName: 'Name',
         waPhone: 'Phone',
@@ -639,6 +689,37 @@ const i18n = {
 function tr(key) {
     const pack = i18n[currentLang];
     return pack && Object.prototype.hasOwnProperty.call(pack, key) ? pack[key] : '';
+}
+
+function clearBookingSubmitError() {
+    const el = document.getElementById('booking-submit-error');
+    if (!el) {
+        return;
+    }
+    el.textContent = '';
+    el.classList.add('hidden');
+}
+
+function showBookingSubmitError(message) {
+    const el = document.getElementById('booking-submit-error');
+    if (!el || !message) {
+        return;
+    }
+    el.textContent = message;
+    el.classList.remove('hidden');
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function firstValidationMessageFromErrors(errors) {
+    if (!errors || typeof errors !== 'object') {
+        return '';
+    }
+    for (const msgs of Object.values(errors)) {
+        if (Array.isArray(msgs) && msgs[0]) {
+            return String(msgs[0]);
+        }
+    }
+    return '';
 }
 
 function refreshBodyScrollLock() {
@@ -1133,6 +1214,12 @@ function applyLanguage(lang) {
     if (f4t) f4t.textContent = L.feature4Title;
     const f4s = document.getElementById('feature-4-sub');
     if (f4s) f4s.textContent = L.feature4Sub;
+    const qrKicker = document.getElementById('website-qr-kicker');
+    if (qrKicker) qrKicker.textContent = L.qrKicker;
+    const qrTitle = document.getElementById('website-qr-title');
+    if (qrTitle) qrTitle.textContent = L.qrTitle;
+    const qrSub = document.getElementById('website-qr-sub');
+    if (qrSub) qrSub.textContent = L.qrSub;
 
     document.getElementById('booking-stepper')?.setAttribute('aria-label', L.stepperAria);
     document.getElementById('social-fab-toggle')?.setAttribute('aria-label', L.socialFabAria);
@@ -1369,6 +1456,16 @@ function buildWhatsAppMessage(name, phone, addons) {
     ].join('\n');
 }
 
+function buildWhatsAppUrl(message) {
+    const phone = String(bookingForm?.dataset?.bookingWhatsappPhone || '').replace(/\D+/g, '');
+    const baseUrl = phone
+        ? `https://wa.me/${phone}`
+        : (bookingForm?.dataset?.bookingWhatsappUrl || 'https://wa.me/905528255694');
+    const glue = baseUrl.includes('?') ? '&' : '?';
+
+    return `${baseUrl}${glue}text=${encodeURIComponent(message)}`;
+}
+
 function getCurrentStep() {
     const hero = document.querySelector('.hero');
     const step = Number(hero?.dataset?.step || '1');
@@ -1502,7 +1599,7 @@ document.getElementById('search-slots').addEventListener('click', () => {
     // Refresh from DB when user re-checks availability for this date.
     availabilityCache.delete(d);
     availability.classList.remove('hidden');
-    renderSlotGrid(d, false);
+    renderSlotGrid(d, false, true);
 
     // Auto-scroll to available slots section
     requestAnimationFrame(() => {
@@ -1516,11 +1613,8 @@ document.getElementById('slot-grid-available')?.addEventListener('click', (e) =>
     if (!btn) {
         return;
     }
-    document.querySelectorAll('#slot-grid-available button.slot-card-available').forEach((b) => {
-        b.classList.remove('active');
-    });
-    btn.classList.add('active');
-    selectedSlot = btn.dataset.slot || '';
+    selectAvailableSlot(btn.dataset.slot || '');
+    clearFieldError(document.getElementById('reservation_time'));
     persistBookingDraft();
 });
 
@@ -1536,6 +1630,19 @@ document.getElementById('reservation_date')?.addEventListener('change', () => {
         return;
     }
     renderSlotGrid(document.getElementById('reservation_date').value, false);
+    persistBookingDraft();
+});
+
+document.getElementById('reservation_time')?.addEventListener('change', () => {
+    const date = document.getElementById('reservation_date')?.value || '';
+    selectedSlot = '';
+
+    if (availability && !availability.classList.contains('hidden') && date) {
+        renderSlotGrid(date, false, true);
+    } else {
+        clearFieldError(document.getElementById('reservation_time'));
+    }
+
     persistBookingDraft();
 });
 
@@ -1589,8 +1696,14 @@ document.getElementById('skip-step-2')?.addEventListener('click', () => {
 ['customer_name', 'customer_phone', 'customer_email', 'reservation_notes'].forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
-    el.addEventListener('input', renderFinalSummary);
-    el.addEventListener('change', renderFinalSummary);
+    el.addEventListener('input', () => {
+        clearBookingSubmitError();
+        renderFinalSummary();
+    });
+    el.addEventListener('change', () => {
+        clearBookingSubmitError();
+        renderFinalSummary();
+    });
 });
 
 ['reservation_time', 'guest_count'].forEach((id) => {
@@ -1653,6 +1766,8 @@ document.getElementById('booking-flow').addEventListener('submit', (e) => {
 
     const msg = buildWhatsAppMessage(name, phone, addons);
 
+    clearBookingSubmitError();
+
     const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     const payload = {
         reservation_date: document.getElementById('reservation_date').value,
@@ -1700,11 +1815,14 @@ document.getElementById('booking-flow').addEventListener('submit', (e) => {
             return json;
         })
         .then(() => {
+            clearBookingSubmitError();
             clearBookingDraft();
-            window.location.href = `https://wa.me/905528255694?text=${encodeURIComponent(msg)}`;
+            window.location.href = buildWhatsAppUrl(msg);
         })
         .catch((err) => {
-            const json = err.body;
+            const json = err.body && typeof err.body === 'object' ? err.body : {};
+            clearFieldError(phoneInput);
+
             const validationFieldMap = {
                 customer_phone: 'customer_phone',
                 customer_name: 'customer_name',
@@ -1713,17 +1831,36 @@ document.getElementById('booking-flow').addEventListener('submit', (e) => {
                 guest_count: 'guest_count',
                 customer_email: 'customer_email',
             };
-            if (err.status === 422 && json && json.errors && typeof json.errors === 'object') {
+            if (err.status === 422 && json.errors && typeof json.errors === 'object') {
+                for (const [, domId] of Object.entries(validationFieldMap)) {
+                    clearFieldError(document.getElementById(domId));
+                }
                 for (const [apiKey, domId] of Object.entries(validationFieldMap)) {
                     const first = json.errors[apiKey]?.[0];
                     if (first) {
                         const el = document.getElementById(domId);
-                        setFieldError(el, first);
-                        return;
+                        if (el) {
+                            setFieldError(el, first);
+                            return;
+                        }
                     }
                 }
+                const orphan = firstValidationMessageFromErrors(json.errors);
+                if (orphan) {
+                    showBookingSubmitError(orphan);
+                    return;
+                }
             }
-            setFieldError(phoneInput, i18n[currentLang].errorSaveBooking);
+
+            if (err.status === 419) {
+                showBookingSubmitError(i18n[currentLang].errorSessionExpired);
+                return;
+            }
+
+            const serverMsg = typeof json.message === 'string' && json.message.trim()
+                ? json.message.trim()
+                : '';
+            showBookingSubmitError(serverMsg || i18n[currentLang].errorSaveBooking);
         });
 });
 

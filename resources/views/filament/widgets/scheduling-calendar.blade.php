@@ -109,7 +109,7 @@
                             @endphp
 
                             @php
-                                $stripe = in_array($status, ['holiday', 'unavailable', 'outside'], true);
+                                $stripe = in_array($status, ['holiday', 'unavailable', 'outside', 'disabled'], true);
                                 $cellBg =
                                     match ($status) {
                                         'available' => 'bg-emerald-50 dark:bg-emerald-950/40',
@@ -130,6 +130,14 @@
                                         <div class="truncate text-[0.65rem] text-gray-700 dark:text-gray-300">
                                             {{ $cell['detail'] ?? '' }}
                                         </div>
+                                        <button
+                                            type="button"
+                                            wire:click="markHourAvailable('{{ $day['date'] }}', {{ $hour }})"
+                                            wire:confirm="{{ __('panel.dashboard.calendar.confirm_open_hour') }}"
+                                            class="mt-auto text-[0.6rem] font-medium text-primary-600 hover:underline dark:text-primary-400"
+                                        >
+                                            {{ __('panel.dashboard.calendar.make_available') }}
+                                        </button>
                                     @elseif ($status === 'holiday')
                                         <div class="text-[0.6rem] text-gray-600 dark:text-gray-400">
                                             {{ __('panel.dashboard.calendar.closed_day') }}
@@ -144,7 +152,7 @@
                                             wire:confirm="{{ __('panel.dashboard.calendar.confirm_block_hour') }}"
                                             class="mt-auto inline-flex w-full items-center justify-center rounded border border-emerald-200 bg-white/90 px-1 py-0.5 text-[0.65rem] font-medium text-emerald-800 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/50 dark:text-emerald-100 dark:hover:bg-emerald-900"
                                         >
-                                            <span class="text-base leading-none">+</span>
+                                            {{ __('panel.dashboard.calendar.mark_unavailable') }}
                                         </button>
                                     @elseif ($status === 'unavailable')
                                         <div class="text-[0.6rem] text-gray-600 dark:text-gray-400">
@@ -161,6 +169,10 @@
                                     @elseif ($status === 'outside')
                                         <div class="text-[0.55rem] leading-snug text-gray-500 dark:text-gray-500">
                                             {{ __('panel.dashboard.calendar.outside_hours') }}
+                                        </div>
+                                    @elseif ($status === 'disabled')
+                                        <div class="text-[0.55rem] leading-snug text-gray-500 dark:text-gray-500">
+                                            {{ __('panel.dashboard.calendar.booking_disabled') }}
                                         </div>
                                     @endif
                                 </div>

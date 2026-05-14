@@ -16,10 +16,13 @@ class OccasionsTable
         return $table
             ->columns([
                 TextColumn::make('name_ar')
+                    ->label(__('panel.forms.occasion.name_ar'))
                     ->searchable(),
                 TextColumn::make('name_en')
+                    ->label(__('panel.forms.occasion.name_en'))
                     ->searchable(),
                 IconColumn::make('is_active')
+                    ->label(__('panel.forms.occasion.is_active'))
                     ->boolean(),
                 TextColumn::make('created_at')
                     ->dateTime()

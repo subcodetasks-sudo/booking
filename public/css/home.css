@@ -983,6 +983,22 @@ html, body {
         .btn-secondary:hover {
             background: var(--sage-dark);
         }
+        .booking-submit-error {
+            margin: 0 auto 14px;
+            max-width: min(100%, 420px);
+            padding: 12px 14px;
+            border-radius: 12px;
+            border: 1px solid rgba(192, 86, 63, 0.45);
+            background: rgba(255, 245, 240, 0.95);
+            color: #8b2f24;
+            font-size: clamp(14px, 3.8vw, 16px);
+            font-weight: 600;
+            line-height: 1.45;
+            text-align: center;
+        }
+        .booking-submit-error.hidden {
+            display: none !important;
+        }
         #availability.availability:not(.hidden) { margin-top: 14px; }
         .availability-picker {
             margin-top: 0;
@@ -1422,6 +1438,67 @@ html, body {
         .feature strong { display: block; margin-bottom: 6px; color: #3a332b; font-weight: 800; }
         .feature span { font-size: 13px; color: #6b6358; font-weight: 600; }
 
+        .website-qr-card {
+            width: min(700px, calc(100% - 96px));
+            margin: 18px auto 22px;
+            padding: 16px 18px;
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 132px;
+            align-items: center;
+            gap: 26px;
+            direction: ltr;
+            text-align: right;
+            color: #3a332b;
+            background:
+                radial-gradient(260px 150px at 82% 20%, rgba(192, 86, 63, 0.08) 0%, transparent 70%),
+                rgba(250, 246, 239, 0.94);
+            border: 1px solid rgba(192, 86, 63, 0.22);
+            border-radius: 22px;
+            box-shadow: 0 14px 34px rgba(48, 38, 26, 0.14);
+            backdrop-filter: blur(8px);
+        }
+        .website-qr-copy {
+            direction: rtl;
+            min-width: 0;
+        }
+        .website-qr-kicker {
+            display: inline-flex;
+            margin-bottom: 6px;
+            color: var(--terracotta-dark);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.04em;
+        }
+        .website-qr-card h2 {
+            margin: 0;
+            color: #3a332b;
+            font-size: clamp(19px, 2.4vw, 25px);
+            font-weight: 900;
+            line-height: 1.25;
+        }
+        .website-qr-card p {
+            margin: 6px 0 0;
+            color: #6b6358;
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.65;
+        }
+        .website-qr-frame {
+            width: 132px;
+            padding: 8px;
+            border-radius: 17px;
+            background: #fff;
+            box-shadow:
+                inset 0 0 0 1px rgba(192, 86, 63, 0.13),
+                0 10px 24px rgba(192, 86, 63, 0.14);
+        }
+        .website-qr-frame img {
+            display: block;
+            width: 100%;
+            height: auto;
+            border-radius: 12px;
+        }
+
         /* قائمة التواصل العائمة */
         .social-fab {
             position: fixed;
@@ -1545,6 +1622,22 @@ html, body {
             .booking-form { min-height: 420px; padding: 22px 16px; }
             .step3-reading-root { padding: 24px 18px 28px; }
             .step3-actions-stack { flex-direction: column; }
+            .website-qr-card {
+                width: 100%;
+                grid-template-columns: 1fr;
+                text-align: center;
+                justify-items: center;
+                gap: 14px;
+                margin-top: 18px;
+                padding: 18px 16px;
+            }
+            .website-qr-copy {
+                direction: rtl;
+            }
+            .website-qr-frame {
+                width: min(168px, 58vw);
+                order: -1;
+            }
             .step3-submit-wrap,
             .step3-back-wrap { width: 100%; }
             .step3-submit-wrap .btn,

@@ -25,7 +25,7 @@ class DietaryOption extends Model
 
     public function reservations(): BelongsToMany
     {
-        return $this->belongsToMany(Reservation::class)
+        return $this->belongsToMany(Reservation::class, 'reservation_dietary_option')
             ->withPivot(['scope'])
             ->withTimestamps();
     }

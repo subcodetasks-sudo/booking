@@ -86,21 +86,6 @@ class SchedulingCalendarWidget extends Widget
     {
         $d = Carbon::parse($date)->toDateString();
 
-        $hasReservation = Reservation::query()
-            ->whereDate('reservation_date', $d)
-            ->where('status', '!=', 'cancelled')
-            ->whereTime('reservation_time', sprintf('%02d:00:00', $hour))
-            ->exists();
-
-        if ($hasReservation) {
-            Notification::make()
-                ->title(__('panel.dashboard.calendar.block_denied_booked'))
-                ->danger()
-                ->send();
-
-            return;
-        }
-
         TimeSlot::query()->updateOrCreate(
             [
                 'slot_date' => $d,
@@ -124,10 +109,21 @@ class SchedulingCalendarWidget extends Widget
     public function markHourAvailable(string $date, int $hour): void
     {
         $d = Carbon::parse($date)->toDateString();
+        $time = sprintf('%02d:00:00', $hour);
+
+        Reservation::query()
+            ->whereDate('reservation_date', $d)
+            ->where('status', '!=', 'cancelled')
+            ->whereTime('reservation_time', $time)
+            ->update([
+                'status' => 'cancelled',
+                'cancelled_at' => now(),
+                'cancel_reason' => __('panel.dashboard.calendar.cancel_reason_reopened'),
+            ]);
 
         TimeSlot::query()
             ->whereDate('slot_date', $d)
-            ->whereTime('start_time', sprintf('%02d:00:00', $hour))
+            ->whereTime('start_time', $time)
             ->where('is_closed_manually', true)
             ->delete();
 

@@ -38,9 +38,9 @@ class ReservationsTable
                     ->searchable(),
                 TextColumn::make('order_status')
                     ->searchable(),
-                TextColumn::make('occasion.id')
-                    ->numeric()
-                    ->sortable(),
+                TextColumn::make('occasion.name_ar')
+                    ->label(__('panel.resources.occasion.singular'))
+                    ->searchable(),
                 TextColumn::make('customer_name')
                     ->searchable(),
                 TextColumn::make('customer_phone')

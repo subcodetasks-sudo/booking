@@ -11,10 +11,6 @@ use Illuminate\Support\Collection;
 
 final class WeekCalendarBuilder
 {
-    private const DISPLAY_HOUR_START = 8;
-
-    private const DISPLAY_HOUR_END = 19;
-
     /**
      * Week columns: Saturday → Friday.
      *
@@ -26,6 +22,7 @@ final class WeekCalendarBuilder
         $weekEnd = $weekStart->copy()->addDays(6)->startOfDay();
 
         [$bookingStartMin, $bookingEndMin] = $this->bookingWindowMinutes();
+        $bookingIsActive = (bool) SiteSetting::getValue('booking_is_active', true);
 
         $closureDates = ScheduleDayClosure::query()
             ->whereBetween('closure_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
@@ -50,7 +47,10 @@ final class WeekCalendarBuilder
             ->get()
             ->groupBy(fn (TimeSlot $s) => Carbon::parse($s->slot_date)->toDateString());
 
-        $hours = range(self::DISPLAY_HOUR_START, self::DISPLAY_HOUR_END);
+        $hours = range(
+            (int) floor($bookingStartMin / 60),
+            max((int) floor(($bookingEndMin - 1) / 60), (int) floor($bookingStartMin / 60)),
+        );
 
         $days = [];
         for ($i = 0; $i < 7; $i++) {
@@ -68,6 +68,7 @@ final class WeekCalendarBuilder
                     $isHoliday,
                     $bookingStartMin,
                     $bookingEndMin,
+                    $bookingIsActive,
                     $reservationByDateHour->get($dateStr . '_' . $hour),
                     $daySlots,
                 );
@@ -144,6 +145,7 @@ final class WeekCalendarBuilder
         bool $isHoliday,
         int $bookingStartMin,
         int $bookingEndMin,
+        bool $bookingIsActive,
         ?Reservation $reservation,
         Collection $daySlots,
     ): array {
@@ -151,6 +153,16 @@ final class WeekCalendarBuilder
             return [
                 'hour' => $hour,
                 'status' => 'holiday',
+                'detail' => null,
+                'reservation_id' => null,
+                'closure_slot_id' => null,
+            ];
+        }
+
+        if (! $bookingIsActive) {
+            return [
+                'hour' => $hour,
+                'status' => 'disabled',
                 'detail' => null,
                 'reservation_id' => null,
                 'closure_slot_id' => null,

@@ -7,7 +7,9 @@ use App\Models\Occasion;
 use App\Models\Product;
 use App\Models\Reservation;
 use App\Models\ReservationAddon;
+use App\Models\ScheduleDayClosure;
 use App\Models\SiteSetting;
+use App\Models\TimeSlot;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -83,6 +85,12 @@ class ReservationController extends Controller
         $date = Carbon::parse($data['date']);
         [$startAt, $endAt] = $this->getBookingWindow();
         $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
+        if (! $this->bookingIsActive() || $this->dateIsClosed($date)) {
+            return response()->json([
+                'date' => $date->toDateString(),
+                'slots' => [],
+            ]);
+        }
 
         $reservedByTime = Reservation::query()
             ->whereDate('reservation_date', $date->toDateString())
@@ -91,9 +99,15 @@ class ReservationController extends Controller
             ->groupBy('reservation_time')
             ->pluck('reservations_count', 'reservation_time');
 
-        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime): array {
+        $manualClosedSlots = TimeSlot::query()
+            ->whereDate('slot_date', $date->toDateString())
+            ->where('is_closed_manually', true)
+            ->get(['start_time', 'end_time']);
+
+        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots): array {
             $reserved = (int) ($reservedByTime[$start.':00'] ?? $reservedByTime[$start] ?? 0);
-            $isUnavailable = $reserved > 0; // one booking per hour
+            $isClosedManually = $this->slotIsManuallyClosed($manualClosedSlots, $start);
+            $isUnavailable = $reserved > 0 || $isClosedManually; // one booking per hour
 
             return [
                 'time' => $start,
@@ -103,7 +117,7 @@ class ReservationController extends Controller
                 'held' => 0,
                 'available' => $isUnavailable ? 0 : 1,
                 'is_unavailable' => $isUnavailable,
-                'is_closed_manually' => false,
+                'is_closed_manually' => $isClosedManually,
             ];
         })->all();
 
@@ -153,18 +167,17 @@ class ReservationController extends Controller
 
         return DB::transaction(function () use ($data) {
             $date = Carbon::parse($data['reservation_date']);
+            if (! $this->bookingIsActive() || $this->dateIsClosed($date)) {
+                throw ValidationException::withMessages([
+                    'reservation_date' => 'الحجز غير متاح في هذا اليوم.',
+                ]);
+            }
+
             [$startAt, $endAt] = $this->getBookingWindow();
             $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
 
             $requestedTime = substr((string) $data['reservation_time'], 0, 5);
-            $requestedIndex = null;
-            foreach ($timeKeys as $i => $slotTime) {
-                if ($slotTime >= $requestedTime) {
-                    $requestedIndex = $i;
-                    break;
-                }
-            }
-            if ($requestedIndex === null) {
+            if (! in_array($requestedTime, $timeKeys, true)) {
                 throw ValidationException::withMessages([
                     'reservation_time' => 'Selected time is خارج نافذة الحجز.',
                 ]);
@@ -178,18 +191,20 @@ class ReservationController extends Controller
                 ->all();
             $reservedSet = array_flip($reservedTimes);
 
-            $assignedTime = null;
-            for ($i = $requestedIndex; $i < count($timeKeys); $i++) {
-                $candidate = $timeKeys[$i];
-                if (! isset($reservedSet[$candidate])) {
-                    $assignedTime = $candidate;
-                    break;
-                }
+            if (isset($reservedSet[$requestedTime])) {
+                throw ValidationException::withMessages([
+                    'reservation_time' => 'الوقت المختار محجوز. اختر وقتًا متاحًا آخر.',
+                ]);
             }
 
-            if (! $assignedTime) {
+            $manualClosedSlots = TimeSlot::query()
+                ->whereDate('slot_date', $date->toDateString())
+                ->where('is_closed_manually', true)
+                ->get(['start_time', 'end_time']);
+
+            if ($this->slotIsManuallyClosed($manualClosedSlots, $requestedTime)) {
                 throw ValidationException::withMessages([
-                    'reservation_time' => 'لا توجد مواعيد متاحة بعد الوقت المختار.',
+                    'reservation_time' => 'الوقت المختار غير متاح. اختر وقتًا آخر.',
                 ]);
             }
 
@@ -206,7 +221,7 @@ class ReservationController extends Controller
             $reservation = Reservation::create([
                 'reservation_code' => $this->makeReservationCode(),
                 'reservation_date' => $data['reservation_date'],
-                'reservation_time' => $assignedTime,
+                'reservation_time' => $requestedTime,
                 'guest_count' => $data['guest_count'],
                 'status' => 'pending',
                 'order_status' => 'no_order',
@@ -368,6 +383,42 @@ class ReservationController extends Controller
         }
 
         return $slots;
+    }
+
+    private function bookingIsActive(): bool
+    {
+        return (bool) SiteSetting::getValue('booking_is_active', true);
+    }
+
+    private function dateIsClosed(Carbon $date): bool
+    {
+        return ScheduleDayClosure::query()
+            ->whereDate('closure_date', $date->toDateString())
+            ->exists();
+    }
+
+    private function slotIsManuallyClosed(iterable $manualClosedSlots, string $slotTime): bool
+    {
+        $slotStart = $this->timeToMinutes($slotTime);
+        $slotEnd = $slotStart + 60;
+
+        foreach ($manualClosedSlots as $slot) {
+            $closedStart = $this->timeToMinutes((string) $slot->start_time);
+            $closedEnd = $this->timeToMinutes((string) $slot->end_time);
+
+            if ($slotStart >= $closedStart && $slotEnd <= $closedEnd && $closedEnd > $closedStart) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function timeToMinutes(string $time): int
+    {
+        $parts = explode(':', substr($time, 0, 5));
+
+        return ((int) ($parts[0] ?? 0)) * 60 + ((int) ($parts[1] ?? 0));
     }
 
     private function getMaxGuestCount(): int
