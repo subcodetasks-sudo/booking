@@ -84,13 +84,44 @@ final class WeekCalendarBuilder
             ];
         }
 
+        $statistics = $this->buildStatistics($days);
+
         return [
             'week_start' => $weekStart,
             'week_end' => $weekEnd,
             'range_label' => $this->formatRangeLabel($weekStart, $weekEnd),
             'hours' => $hours,
             'days' => $days,
+            'statistics' => $statistics,
         ];
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $days
+     * @return array{available: int, booked: int, unavailable: int, total: int}
+     */
+    private function buildStatistics(array $days): array
+    {
+        $counts = [
+            'available' => 0,
+            'booked' => 0,
+            'unavailable' => 0,
+            'total' => 0,
+        ];
+
+        foreach ($days as $day) {
+            foreach ($day['cells'] as $cell) {
+                $status = $cell['status'] ?? 'outside';
+                if (! in_array($status, ['available', 'booked', 'unavailable'], true)) {
+                    continue;
+                }
+
+                $counts['total']++;
+                $counts[$status]++;
+            }
+        }
+
+        return $counts;
     }
 
     /**

@@ -161,27 +161,6 @@
                         </div>
                     </div>
                 </div>
-                <div class="dietary-card dietary-card--modern occasions-card field">
-                    <label id="occasions-main-label" class="visually-hidden">مناسبات خاصة</label>
-                    <div class="dietary-modern-layout">
-                        <div class="dietary-modern-icon-wrap" aria-hidden="true">
-                            <svg viewBox="0 0 24 24" fill="none">
-                                <path d="M12 3l1.5 4.2L18 9l-4.5 1.3L12 14l-1.5-3.7L6 9l4.5-1.8L12 3z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
-                                <path d="M6 14h12v7H6v-7z" stroke="currentColor" stroke-width="1.35" stroke-linejoin="round"/>
-                                <path d="M9 17h6" stroke="currentColor" stroke-width="1.35" stroke-linecap="round"/>
-                            </svg>
-                        </div>
-                        <div class="dietary-modern-main">
-                            <h3 id="occasions-display-title" class="dietary-modern-title">مناسبات خاصة</h3>
-                            <p id="occasions-hint" class="dietary-modern-sub">اختر نوع المناسبة ثم اضغط حفظ أسفل القائمة.</p>
-                            <span id="occasions-summary-inline" class="diet-summary-inline" aria-live="polite"></span>
-                        </div>
-                        <div class="dietary-modern-cta">
-                            <button id="occasions-open-btn" class="btn-diet-add" type="button"><span id="occasions-open-label">+ إضافة</span></button>
-                        </div>
-                    </div>
-                </div>
-                <input type="hidden" id="special_occasion_id" name="special_occasion_id" value="">
                 <div class="notes-card field">
                     <div class="notes-card-inner">
                         <div class="notes-card-icon-wrap" aria-hidden="true">
@@ -289,19 +268,6 @@
             </div>
         </div>
 
-        <div id="occasions-modal" class="diet-modal occasions-modal hidden" aria-hidden="true">
-            <div class="diet-modal-backdrop" id="occasions-modal-backdrop"></div>
-            <div class="diet-modal-sheet occasions-modal-sheet" role="dialog" aria-modal="true" aria-labelledby="occasions-modal-label">
-                <span id="occasions-modal-label" class="visually-hidden">مناسبات خاصة</span>
-                <div class="occasions-modal-body">
-                    <div id="occasions-chip-grid" class="occasions-chip-grid"></div>
-                </div>
-                <div class="occasions-modal-footer">
-                    <button type="button" class="btn-occasions-cancel" id="occasions-cancel"></button>
-                    <button type="button" class="btn-occasions-save" id="occasions-save"></button>
-                </div>
-            </div>
-        </div>
   <section class="website-qr-card" aria-labelledby="website-qr-title">
             <div class="website-qr-copy">
                 <span class="website-qr-kicker" id="website-qr-kicker">امسح الكود</span>

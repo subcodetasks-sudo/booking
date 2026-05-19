@@ -17,6 +17,8 @@ Route::get('/dietary-options', [ReservationController::class, 'dietaryOptions'])
     ->name('reservations.dietary-options');
 Route::get('/availability', [ReservationController::class, 'availability'])
     ->name('reservations.availability');
+Route::get('/availability/closed-dates', [ReservationController::class, 'closedDates'])
+    ->name('reservations.closed-dates');
 
 Route::get('/panel-locale/{locale}', function (string $locale) {
     abort_unless(in_array($locale, ['ar', 'en'], true), 404);

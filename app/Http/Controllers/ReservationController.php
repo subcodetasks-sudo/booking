@@ -84,13 +84,27 @@ class ReservationController extends Controller
 
         $date = Carbon::parse($data['date']);
         [$startAt, $endAt] = $this->getBookingWindow();
-        $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
-        if (! $this->bookingIsActive() || $this->dateIsClosed($date)) {
+        $bookingActive = $this->bookingIsActive();
+        $dayClosed = $this->dateIsClosed($date);
+
+        if (! $bookingActive || $dayClosed) {
             return response()->json([
                 'date' => $date->toDateString(),
+                'booking_active' => $bookingActive,
+                'day_closed' => $dayClosed,
+                'booking_start' => $startAt,
+                'booking_end' => $endAt,
+                'counts' => [
+                    'available' => 0,
+                    'booked' => 0,
+                    'blocked' => 0,
+                    'total' => 0,
+                ],
                 'slots' => [],
             ]);
         }
+
+        $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
 
         $reservedByTime = Reservation::query()
             ->whereDate('reservation_date', $date->toDateString())
@@ -104,10 +118,24 @@ class ReservationController extends Controller
             ->where('is_closed_manually', true)
             ->get(['start_time', 'end_time']);
 
-        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots): array {
+        $counts = ['available' => 0, 'booked' => 0, 'blocked' => 0, 'total' => 0];
+
+        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots, &$counts): array {
             $reserved = (int) ($reservedByTime[$start.':00'] ?? $reservedByTime[$start] ?? 0);
             $isClosedManually = $this->slotIsManuallyClosed($manualClosedSlots, $start);
-            $isUnavailable = $reserved > 0 || $isClosedManually; // one booking per hour
+
+            if ($reserved > 0) {
+                $status = 'booked';
+            } elseif ($isClosedManually) {
+                $status = 'blocked';
+            } else {
+                $status = 'available';
+            }
+
+            $counts['total']++;
+            $counts[$status]++;
+
+            $isUnavailable = $status !== 'available';
 
             return [
                 'time' => $start,
@@ -118,12 +146,38 @@ class ReservationController extends Controller
                 'available' => $isUnavailable ? 0 : 1,
                 'is_unavailable' => $isUnavailable,
                 'is_closed_manually' => $isClosedManually,
+                'status' => $status,
             ];
         })->all();
 
         return response()->json([
             'date' => $date->toDateString(),
+            'booking_active' => true,
+            'day_closed' => false,
+            'booking_start' => $startAt,
+            'booking_end' => $endAt,
+            'counts' => $counts,
             'slots' => $slots,
+        ]);
+    }
+
+    public function closedDates(Request $request)
+    {
+        $data = $request->validate([
+            'from' => ['required', 'date_format:Y-m-d'],
+            'to' => ['required', 'date_format:Y-m-d', 'after_or_equal:from'],
+        ]);
+
+        $dates = ScheduleDayClosure::query()
+            ->whereBetween('closure_date', [$data['from'], $data['to']])
+            ->orderBy('closure_date')
+            ->pluck('closure_date')
+            ->map(fn ($d) => Carbon::parse($d)->toDateString())
+            ->values()
+            ->all();
+
+        return response()->json([
+            'dates' => $dates,
         ]);
     }
 

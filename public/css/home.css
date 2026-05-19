@@ -1000,6 +1000,19 @@ html, body {
             display: none !important;
         }
         #availability.availability:not(.hidden) { margin-top: 14px; }
+        .availability-notice {
+            margin: 0 0 10px;
+            padding: 10px 14px;
+            border-radius: 10px;
+            border: 1px solid rgba(192, 86, 63, 0.35);
+            background: rgba(255, 245, 240, 0.95);
+            color: #8b2f24;
+            font-size: 14px;
+            font-weight: 600;
+            line-height: 1.45;
+            text-align: center;
+        }
+        .availability-notice.hidden { display: none !important; }
         .availability-picker {
             margin-top: 0;
             padding: 0;
@@ -1039,6 +1052,21 @@ html, body {
         }
         .slot-acc-trigger:hover { background: #efe9de; }
         .slot-acc-trigger .slot-acc-label { flex: 1; }
+        .slot-acc-count {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.35rem;
+            height: 1.35rem;
+            padding: 0 0.35rem;
+            border-radius: 9999px;
+            background: var(--terracotta);
+            color: #fff;
+            font-size: 11px;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
+        .slot-acc-count.is-empty { display: none; }
         .slot-acc-chevron svg {
             width: 18px;
             height: 18px;
@@ -1052,9 +1080,17 @@ html, body {
         .slot-acc-trigger[aria-expanded="false"] + .slot-acc-panel { display: none; }
         .slot-grid-cards,
         .slot-grid-booked-row {
-            display: flex;
-            flex-wrap: wrap;
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 10px;
+        }
+        @media (max-width: 1024px) {
+            .slot-grid-cards,
+            .slot-grid-booked-row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
+        @media (max-width: 640px) {
+            .slot-grid-cards,
+            .slot-grid-booked-row { grid-template-columns: 1fr; }
         }
         .slot-card-available {
             border: none;
@@ -1062,9 +1098,8 @@ html, body {
             background: linear-gradient(158deg, var(--terracotta) 0%, #b54a32 45%, var(--terracotta-dark) 100%);
             color: #fff;
             padding: 14px 18px;
-            min-width: 132px;
-            flex: 1 1 132px;
-            max-width: 180px;
+            width: 100%;
+            min-width: 0;
             cursor: pointer;
             font-family: inherit;
             box-shadow: 0 4px 16px rgba(120, 90, 52, 0.28);
@@ -1092,6 +1127,13 @@ html, body {
             letter-spacing: 0.04em;
             line-height: 1.2;
         }
+        .slot-card-range {
+            display: block;
+            margin-top: 2px;
+            font-size: 11px;
+            font-weight: 600;
+            opacity: 0.88;
+        }
         .slot-card-available.active .slot-card-time {
             font-size: 24px;
         }
@@ -1114,11 +1156,18 @@ html, body {
             border: 1px solid #ebe2d6;
             background: linear-gradient(180deg, #fdfbf7 0%, #f7f1e8 100%);
             padding: 14px 18px;
-            min-width: 132px;
-            flex: 1 1 132px;
-            max-width: 180px;
+            width: 100%;
+            min-width: 0;
             text-align: center;
             box-shadow: inset 0 1px 0 rgba(255,255,255,.85);
+        }
+        .slot-card-blocked {
+            border-color: #e8d4b8;
+            background: linear-gradient(180deg, #fff9f0 0%, #f5ebe0 100%);
+        }
+        .slot-card-blocked .slot-booked-badge {
+            background: #c9a227;
+            color: #fff;
         }
         .slot-card-booked-time {
             display: block;

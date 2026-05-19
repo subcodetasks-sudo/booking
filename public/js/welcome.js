@@ -1,4 +1,4 @@
-const step1 = document.getElementById('step-1');
+﻿const step1 = document.getElementById('step-1');
 const step2 = document.getElementById('step-2');
 const step3 = document.getElementById('step-3');
 const availability = document.getElementById('availability');
@@ -329,36 +329,6 @@ async function loadReservationAddons() {
     renderReservationAddons();
 }
 
-let OCCASION_OPTIONS = [];
-
-async function loadOccasionOptions() {
-    try {
-        const res = await fetch('/occasions', {
-            headers: { Accept: 'application/json' },
-        });
-        if (!res.ok) {
-            return;
-        }
-        const payload = await res.json();
-        const options = Array.isArray(payload.occasions) ? payload.occasions : [];
-        const cleaned = options
-            .filter((item) => item && item.id && item.name_ar && item.name_en)
-            .map((item) => ({
-                id: String(item.id),
-                ar: String(item.name_ar),
-                en: String(item.name_en),
-            }));
-        if (cleaned.length > 0) {
-            OCCASION_OPTIONS = cleaned;
-        }
-    } catch {
-        // Keep fallback options when API is unavailable.
-    }
-}
-
-let draftOccasionId = null;
-let committedOccasionId = null;
-
 function persistBookingDraft() {
     if (isRestoringDraft) {
         return;
@@ -387,7 +357,6 @@ function persistBookingDraft() {
             customer_phone: document.getElementById('customer_phone')?.value || '',
             customer_email: document.getElementById('customer_email')?.value || '',
             reservation_notes: document.getElementById('reservation_notes')?.value || '',
-            committed_occasion_id: committedOccasionId || null,
             committed_self_ids: [...committedSelfIds],
             committed_guest_ids: [...committedGuestIds],
             addons: addonQuantities,
@@ -431,8 +400,6 @@ function restoreBookingDraft() {
         }
 
         selectedSlot = draft.selected_slot || '';
-        committedOccasionId = draft.committed_occasion_id || null;
-
         committedSelfIds.clear();
         committedGuestIds.clear();
         (draft.committed_self_ids || []).forEach((id) => committedSelfIds.add(id));
@@ -452,7 +419,6 @@ function restoreBookingDraft() {
             if (qtyEl) qtyEl.textContent = String(Math.max(0, qty));
         });
 
-        updateOccasionsCardSummary();
         updateDietaryRowSummary();
         updateNotesPreview();
         collectAddons();
@@ -725,133 +691,11 @@ function firstValidationMessageFromErrors(errors) {
 function refreshBodyScrollLock() {
     const diet = document.getElementById('diet-modal');
     const notes = document.getElementById('notes-modal');
-    const occasions = document.getElementById('occasions-modal');
     const locked = Boolean(
         (diet && !diet.classList.contains('hidden'))
-        || (notes && !notes.classList.contains('hidden'))
-        || (occasions && !occasions.classList.contains('hidden')),
+        || (notes && !notes.classList.contains('hidden')),
     );
     document.body.style.overflow = locked ? 'hidden' : '';
-}
-
-function getOccasionLabel(id) {
-    if (!id) {
-        return '';
-    }
-    const opt = OCCASION_OPTIONS.find((o) => o.id === id);
-    if (!opt) {
-        return '';
-    }
-    return currentLang === 'ar' ? opt.ar : opt.en;
-}
-
-function syncOccasionChipsUI() {
-    document.querySelectorAll('#occasions-chip-grid .occasions-chip').forEach((btn) => {
-        const on = btn.dataset.id === draftOccasionId;
-        btn.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
-}
-
-function renderOccasionChips() {
-    const grid = document.getElementById('occasions-chip-grid');
-    if (!grid) {
-        return;
-    }
-    const mk = (opt) => (currentLang === 'ar' ? opt.ar : opt.en);
-    grid.innerHTML = OCCASION_OPTIONS.map((opt) => (
-        `<button type="button" class="occasions-chip" data-id="${opt.id}" aria-pressed="false">`
-        + `<span class="occasions-chip-label">${mk(opt)}</span>`
-        + '<span class="occasions-chip-dot" aria-hidden="true"></span></button>'
-    )).join('');
-    syncOccasionChipsUI();
-}
-
-function updateOccasionsCardSummary() {
-    const el = document.getElementById('occasions-summary-inline');
-    const hidden = document.getElementById('special_occasion_id');
-    if (!el) {
-        return;
-    }
-    if (!committedOccasionId) {
-        el.textContent = '';
-        el.classList.remove('has-detail');
-        if (hidden) {
-            hidden.value = '';
-        }
-        return;
-    }
-    el.textContent = getOccasionLabel(committedOccasionId);
-    el.classList.add('has-detail');
-    if (hidden) {
-        hidden.value = committedOccasionId;
-    }
-}
-
-function openOccasionsModal() {
-    draftOccasionId = committedOccasionId;
-    renderOccasionChips();
-    const modal = document.getElementById('occasions-modal');
-    if (modal) {
-        modal.classList.remove('hidden');
-        modal.removeAttribute('aria-hidden');
-        refreshBodyScrollLock();
-    }
-}
-
-function closeOccasionsModal() {
-    const modal = document.getElementById('occasions-modal');
-    if (modal) {
-        modal.classList.add('hidden');
-        modal.setAttribute('aria-hidden', 'true');
-        refreshBodyScrollLock();
-    }
-}
-
-function saveOccasionsModal() {
-    committedOccasionId = draftOccasionId;
-    updateOccasionsCardSummary();
-    renderFinalSummary();
-    closeOccasionsModal();
-}
-
-function cancelOccasionsModal() {
-    draftOccasionId = committedOccasionId;
-    renderOccasionChips();
-    closeOccasionsModal();
-}
-
-function setupOccasionsModal() {
-    const grid = document.getElementById('occasions-chip-grid');
-    if (!grid || grid.dataset.ready === '1') {
-        return;
-    }
-
-    grid.addEventListener('click', (e) => {
-        const chip = e.target.closest('.occasions-chip');
-        if (!chip || !grid.contains(chip)) {
-            return;
-        }
-        const { id } = chip.dataset;
-        draftOccasionId = draftOccasionId === id ? null : id;
-        syncOccasionChipsUI();
-    });
-
-    document.getElementById('occasions-open-btn')?.addEventListener('click', openOccasionsModal);
-    document.getElementById('occasions-modal-backdrop')?.addEventListener('click', cancelOccasionsModal);
-    document.getElementById('occasions-cancel')?.addEventListener('click', cancelOccasionsModal);
-    document.getElementById('occasions-save')?.addEventListener('click', saveOccasionsModal);
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key !== 'Escape') {
-            return;
-        }
-        const m = document.getElementById('occasions-modal');
-        if (m && !m.classList.contains('hidden')) {
-            cancelOccasionsModal();
-        }
-    });
-
-    grid.dataset.ready = '1';
 }
 
 function updateNotesPreview() {
@@ -1261,35 +1105,6 @@ function applyLanguage(lang) {
     if (notesModalHeading) {
         notesModalHeading.textContent = L.notesModalHeading;
     }
-    const occasionsTitleEl = document.getElementById('occasions-display-title');
-    const occasionsHintEl = document.getElementById('occasions-hint');
-    const occasionsOpenEl = document.getElementById('occasions-open-label');
-    const occasionsMainEl = document.getElementById('occasions-main-label');
-    if (occasionsTitleEl) {
-        occasionsTitleEl.textContent = L.occasionsTitle;
-    }
-    if (occasionsHintEl) {
-        occasionsHintEl.textContent = L.occasionsHint;
-    }
-    if (occasionsOpenEl) {
-        occasionsOpenEl.textContent = L.occasionsOpen;
-    }
-    if (occasionsMainEl) {
-        occasionsMainEl.textContent = L.occasionsTitle;
-    }
-    const occasionsModalLabel = document.getElementById('occasions-modal-label');
-    if (occasionsModalLabel) {
-        occasionsModalLabel.textContent = L.occasionsTitle;
-    }
-    document.getElementById('occasions-save')?.replaceChildren(document.createTextNode(L.occasionsSave));
-    document.getElementById('occasions-cancel')?.replaceChildren(document.createTextNode(L.dietCancel));
-    const occModalEl = document.getElementById('occasions-modal');
-    if (occModalEl?.classList.contains('hidden')) {
-        draftOccasionId = committedOccasionId;
-    }
-    renderOccasionChips();
-    updateOccasionsCardSummary();
-
     document.getElementById('diet-cancel')?.replaceChildren(document.createTextNode(L.dietCancel));
     document.getElementById('diet-save')?.replaceChildren(document.createTextNode(L.dietSave));
     document.getElementById('notes-cancel')?.replaceChildren(document.createTextNode(L.dietCancel));
@@ -1403,10 +1218,6 @@ function collectAddons() {
     return { items, total, addons };
 }
 
-function isNumericOccasionId(value) {
-    return /^\d+$/.test(String(value || ''));
-}
-
 function renderFinalSummary() {
     const box = document.getElementById('final-summary');
     if (!box) {
@@ -1417,7 +1228,6 @@ function renderFinalSummary() {
     const customerName = document.getElementById('customer_name')?.value?.trim() || '-';
     const customerPhone = document.getElementById('customer_phone')?.value?.trim() || '-';
     const customerEmail = document.getElementById('customer_email')?.value?.trim() || '-';
-    const occasionText = committedOccasionId ? getOccasionLabel(committedOccasionId) : '-';
     const allergiesText = getAllergiesForMessage() || '-';
     const notesText = document.getElementById('reservation_notes')?.value?.trim() || '-';
 
@@ -1429,7 +1239,6 @@ function renderFinalSummary() {
         <div class="summary-line"><span>${L.sumName}</span><strong>${customerName}</strong></div>
         <div class="summary-line"><span>${L.sumPhone}</span><strong>${customerPhone}</strong></div>
         <div class="summary-line"><span>${L.sumEmail}</span><strong>${customerEmail}</strong></div>
-        <div class="summary-line"><span>${L.sumOccasion}</span><strong>${occasionText}</strong></div>
         <div class="summary-line"><span>${L.sumDietary}</span><strong>${allergiesText}</strong></div>
         <div class="summary-line"><span>${L.sumNotes}</span><strong>${notesText}</strong></div>`;
 
@@ -1451,7 +1260,6 @@ function buildWhatsAppMessage(name, phone, addons) {
         `${L.waAddons}: ${addons.items.length ? addons.items.join(listSep) : L.waAddonsNone}`,
         `${L.waTotal}: ${addons.total} AED`,
         `${L.allergyMain}: ${getAllergiesForMessage()}`,
-        `${L.occasionsTitle}: ${committedOccasionId ? getOccasionLabel(committedOccasionId) : '-'}`,
         `${L.waNotes}: ${document.getElementById('reservation_notes')?.value || '-'}`,
     ].join('\n');
 }
@@ -1776,8 +1584,8 @@ document.getElementById('booking-flow').addEventListener('submit', (e) => {
         customer_name: name,
         customer_phone: phone,
         customer_email: document.getElementById('customer_email').value || null,
-        occasion_id: committedOccasionId && isNumericOccasionId(committedOccasionId) ? Number(committedOccasionId) : null,
-        occasion: committedOccasionId && !isNumericOccasionId(committedOccasionId) ? getOccasionLabel(committedOccasionId) : null,
+        occasion_id: null,
+        occasion: null,
         dietary_self_ids: [...committedSelfIds],
         dietary_guest_ids: [...committedGuestIds],
         allergies_notes: getAllergiesForMessage(),
@@ -1932,7 +1740,7 @@ function setupSocialFab() {
     toggle.dataset.bound = '1';
 }
 
-Promise.all([loadDietaryOptions(), loadOccasionOptions(), loadReservationAddons()]).finally(() => {
+Promise.all([loadDietaryOptions(), loadReservationAddons()]).finally(() => {
     try {
         const savedLang = sessionStorage.getItem('booking_ui_lang');
         if (savedLang === 'en' || savedLang === 'ar') {
@@ -1952,7 +1760,6 @@ Promise.all([loadDietaryOptions(), loadOccasionOptions(), loadReservationAddons(
     setupNotesModal();
     setupTextZoom();
     setupSocialFab();
-    setupOccasionsModal();
     restoreBookingDraft();
 });
 
