@@ -2,8 +2,8 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Support\ReservationTableFilters;
 use App\Models\Reservation;
-use App\Support\BookingConfig;
 use Carbon\Carbon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -80,26 +80,15 @@ class TodayReservationsTable extends TableWidget
                         'pending' => __('panel.statuses.reservation.pending'),
                         'cancelled' => __('panel.statuses.reservation.cancelled'),
                     ]),
-                SelectFilter::make('reservation_hour')
-                    ->label(__('panel.dashboard.table.reservation_hour'))
-                    ->options(static function (): array {
-                        $opts = BookingConfig::hourOptionsForFilter();
-
-                        return collect($opts)
-                            ->mapWithKeys(fn (string $label, int $hour): array => [(string) $hour => $label])
-                            ->all();
-                    })
-                    ->query(function (Builder $query, array $data): Builder {
-                        return BookingConfig::filterQueryByBookingHour($query, $data['value'] ?? null);
-                    }),
+                ReservationTableFilters::reservationDate(Carbon::today()->toDateString()),
+                ReservationTableFilters::reservationHour(),
             ], layout: FiltersLayout::AboveContent)
-            ->filtersFormColumns(2)
+            ->filtersFormColumns(3)
             ->deferFilters(false);
     }
 
     protected function getTableQuery(): Builder
     {
-        return Reservation::query()
-            ->whereDate('reservation_date', Carbon::today()->toDateString());
+        return Reservation::query();
     }
 }

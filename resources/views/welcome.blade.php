@@ -77,8 +77,8 @@
             class="booking-form"
             data-max-guests="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}"
             data-min-date="{{ now()->toDateString() }}"
-            data-booking-whatsapp-phone="{{ \App\Models\SiteSetting::getValue('booking_whatsapp_phone', '905528255694') }}"
-            data-booking-whatsapp-url="{{ \App\Models\SiteSetting::getValue('social_whatsapp_url', 'https://wa.me/905528255694') }}"
+            data-booking-whatsapp-phone="{{ \App\Models\SiteSetting::bookingWhatsAppPhoneDigits() }}"
+            data-booking-whatsapp-url="{{ \App\Models\SiteSetting::bookingWhatsAppUrl() }}"
         >
             <div id="step-1">
                 <div class="form-section-title centered" id="step-1-title"> اختيار الموعد</div>
@@ -305,10 +305,7 @@
       
 
         @php
-            $bookingWhatsAppPhone = preg_replace('/\D+/', '', (string) \App\Models\SiteSetting::getValue('booking_whatsapp_phone', '905528255694'));
-            $bookingWhatsAppUrl = $bookingWhatsAppPhone
-                ? 'https://wa.me/'.$bookingWhatsAppPhone
-                : \App\Models\SiteSetting::getValue('social_whatsapp_url', 'https://wa.me/905528255694');
+            $bookingWhatsAppUrl = \App\Models\SiteSetting::bookingWhatsAppUrl();
             $socialLinks = [
                 'Instagram' => [
                     'url' => \App\Models\SiteSetting::getValue('social_instagram_url', 'https://www.instagram.com/'),

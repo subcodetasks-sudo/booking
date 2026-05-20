@@ -2,15 +2,13 @@
 
 namespace App\Filament\Resources\Reservations\Tables;
 
-use App\Support\BookingConfig;
+use App\Filament\Support\ReservationTableFilters;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
-use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 
 class ReservationsTable
 {
@@ -78,20 +76,10 @@ class ReservationsTable
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('reservation_hour')
-                    ->label(__('panel.dashboard.table.reservation_hour'))
-                    ->options(static function (): array {
-                        $opts = BookingConfig::hourOptionsForFilter();
-
-                        return collect($opts)
-                            ->mapWithKeys(fn (string $label, int $hour): array => [(string) $hour => $label])
-                            ->all();
-                    })
-                    ->query(function (Builder $query, array $data): Builder {
-                        return BookingConfig::filterQueryByBookingHour($query, $data['value'] ?? null);
-                    }),
+                ReservationTableFilters::reservationDate(),
+                ReservationTableFilters::reservationHour(),
             ], layout: FiltersLayout::AboveContent)
-            ->filtersFormColumns(1)
+            ->filtersFormColumns(2)
             ->deferFilters(false)
             ->recordActions([
                 EditAction::make(),

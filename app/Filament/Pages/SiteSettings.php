@@ -161,11 +161,16 @@ class SiteSettings extends Page
                 (string) max(1, min(10000, (int) $dayCap)),
             );
         }
-        SiteSetting::setValue('booking_whatsapp_phone', self::normalizePhoneForWhatsApp((string) ($state['booking_whatsapp_phone'] ?? '')));
+        $bookingWhatsAppPhone = self::normalizePhoneForWhatsApp((string) ($state['booking_whatsapp_phone'] ?? ''));
+        SiteSetting::setValue('booking_whatsapp_phone', $bookingWhatsAppPhone);
+        if ($bookingWhatsAppPhone !== '') {
+            SiteSetting::setValue('social_whatsapp_url', 'https://wa.me/'.$bookingWhatsAppPhone);
+        } else {
+            SiteSetting::setValue('social_whatsapp_url', $state['social_whatsapp_url'] ?? null);
+        }
         SiteSetting::setValue('social_instagram_url', $state['social_instagram_url'] ?? null);
         SiteSetting::setValue('social_facebook_url', $state['social_facebook_url'] ?? null);
         SiteSetting::setValue('social_tiktok_url', $state['social_tiktok_url'] ?? null);
-        SiteSetting::setValue('social_whatsapp_url', $state['social_whatsapp_url'] ?? null);
 
         Notification::make()
             ->title(__('panel.pages.saved'))

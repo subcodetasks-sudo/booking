@@ -29,7 +29,7 @@ return [
         'booking_is_active' => 'Enable booking during these hours',
         'max_guest_count' => 'Maximum guests',
         'booking_whatsapp_phone' => 'Booking WhatsApp phone',
-        'booking_whatsapp_help' => 'Enter the full international number without + or spaces (e.g. 966508891883).',
+        'booking_whatsapp_help' => 'International number without + or spaces (e.g. 966508891883). Used for the booking form WhatsApp redirect after submit.',
         'booking_max_reservations_per_day' => 'Tables available per day',
         'booking_max_reservations_per_day_description' => 'Maximum reservations for that calendar day (across all time slots). Only one reservation per hourly slot. Leave empty for unlimited daily bookings.',
         'social_media' => 'Social Media Links',
@@ -127,6 +127,7 @@ return [
             'total_amount' => 'Total amount',
             'created_at' => 'Created at',
             'reservation_hour' => 'Hour',
+            'reservation_date' => 'Reservation date',
         ],
     ],
 

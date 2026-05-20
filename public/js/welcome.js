@@ -544,6 +544,7 @@ const i18n = {
         valAcceptPolicy: 'يجب الموافقة على سياسة الحجز.',
         errorSaveBooking: 'تعذر حفظ الحجز. تحقق من الاتصال أو حاول لاحقًا.',
         errorSessionExpired: 'انتهت صلاحية الجلسة. حدّث الصفحة ثم حاول مرة أخرى.',
+        bookingSavedNoWhatsApp: 'تم حفظ الحجز بنجاح.',
         waTitle: '*طلب حجز جديد*',
         waName: 'الاسم',
         waPhone: 'الهاتف',
@@ -650,6 +651,7 @@ const i18n = {
         valAcceptPolicy: 'Please accept the booking policy.',
         errorSaveBooking: 'Could not save the booking. Check your connection or try again.',
         errorSessionExpired: 'Your session expired. Refresh the page and try again.',
+        bookingSavedNoWhatsApp: 'Your booking was saved successfully.',
         waTitle: '*New booking request*',
         waName: 'Name',
         waPhone: 'Phone',
@@ -1282,7 +1284,10 @@ function buildWhatsAppUrl(message) {
     const phone = String(bookingForm?.dataset?.bookingWhatsappPhone || '').replace(/\D+/g, '');
     const baseUrl = phone
         ? `https://wa.me/${phone}`
-        : (bookingForm?.dataset?.bookingWhatsappUrl || 'https://wa.me/905528255694');
+        : String(bookingForm?.dataset?.bookingWhatsappUrl || '').trim();
+    if (!baseUrl) {
+        return '#';
+    }
     const glue = baseUrl.includes('?') ? '&' : '?';
 
     return `${baseUrl}${glue}text=${encodeURIComponent(message)}`;
@@ -1639,7 +1644,13 @@ document.getElementById('booking-flow').addEventListener('submit', (e) => {
         .then(() => {
             clearBookingSubmitError();
             clearBookingDraft();
-            window.location.href = buildWhatsAppUrl(msg);
+            const sendWhatsApp = document.getElementById('confirm_whatsapp')?.checked !== false;
+            if (sendWhatsApp) {
+                window.location.href = buildWhatsAppUrl(msg);
+                return;
+            }
+            goToStep(1);
+            showBookingSubmitError(i18n[currentLang].bookingSavedNoWhatsApp);
         })
         .catch((err) => {
             const json = err.body && typeof err.body === 'object' ? err.body : {};
