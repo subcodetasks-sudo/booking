@@ -7,6 +7,7 @@ use App\Support\BookingConfig;
 use Carbon\Carbon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget;
@@ -89,14 +90,11 @@ class TodayReservationsTable extends TableWidget
                             ->all();
                     })
                     ->query(function (Builder $query, array $data): Builder {
-                        $v = $data['value'] ?? null;
-                        if ($v === null || $v === '') {
-                            return $query;
-                        }
-
-                        return $query->whereHour('reservation_time', (int) $v);
+                        return BookingConfig::filterQueryByBookingHour($query, $data['value'] ?? null);
                     }),
-            ]);
+            ], layout: FiltersLayout::AboveContent)
+            ->filtersFormColumns(2)
+            ->deferFilters(false);
     }
 
     protected function getTableQuery(): Builder

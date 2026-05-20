@@ -7,6 +7,7 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -87,14 +88,11 @@ class ReservationsTable
                             ->all();
                     })
                     ->query(function (Builder $query, array $data): Builder {
-                        $v = $data['value'] ?? null;
-                        if ($v === null || $v === '') {
-                            return $query;
-                        }
-
-                        return $query->whereHour('reservation_time', (int) $v);
+                        return BookingConfig::filterQueryByBookingHour($query, $data['value'] ?? null);
                     }),
-            ])
+            ], layout: FiltersLayout::AboveContent)
+            ->filtersFormColumns(1)
+            ->deferFilters(false)
             ->recordActions([
                 EditAction::make(),
             ])

@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\SiteSetting;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Builder;
 
 final class BookingConfig
 {
@@ -60,5 +61,20 @@ final class BookingConfig
         }
 
         return $opts;
+    }
+
+    /**
+     * Reservations that start on this booking hour (:00 slot). Matches how hourly bookings are stored.
+     * Uses {@see Builder::whereTime()} because the query builder's magic `whereHour()` helper can emit invalid SQL for time columns in this stack.
+     */
+    public static function filterQueryByBookingHour(Builder $query, mixed $hour): Builder
+    {
+        if ($hour === null || $hour === '') {
+            return $query;
+        }
+
+        $h = max(0, min(23, (int) $hour));
+
+        return $query->whereTime('reservation_time', '=', sprintf('%02d:00:00', $h));
     }
 }
