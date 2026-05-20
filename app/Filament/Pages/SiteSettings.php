@@ -47,6 +47,8 @@ class SiteSettings extends Page
             'booking_end_time' => SiteSetting::getValue('booking_end_time', '23:00'),
             'booking_is_active' => (bool) SiteSetting::getValue('booking_is_active', true),
             'max_guest_count' => (int) SiteSetting::getValue('max_guest_count', 20),
+            'booking_tables_per_slot' => (int) SiteSetting::getValue('booking_tables_per_slot', 1),
+            'booking_max_reservations_per_day' => SiteSetting::getValue('booking_max_reservations_per_day'),
             'booking_whatsapp_phone' => SiteSetting::getValue('booking_whatsapp_phone', '905528255694'),
             'social_instagram_url' => SiteSetting::getValue('social_instagram_url', 'https://www.instagram.com/'),
             'social_facebook_url' => SiteSetting::getValue('social_facebook_url', 'https://www.facebook.com/'),
@@ -97,12 +99,26 @@ class SiteSettings extends Page
                             ->minValue(1)
                             ->maxValue(500)
                             ->default(20),
+                        TextInput::make('booking_tables_per_slot')
+                            ->label(__('panel.pages.booking_tables_per_slot'))
+                            ->helperText(__('panel.pages.booking_tables_per_slot_description'))
+                            ->required()
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(500)
+                            ->default(1),
+                        TextInput::make('booking_max_reservations_per_day')
+                            ->label(__('panel.pages.booking_max_reservations_per_day'))
+                            ->helperText(__('panel.pages.booking_max_reservations_per_day_description'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->maxValue(10000),
                         TextInput::make('booking_whatsapp_phone')
                             ->label(__('panel.pages.booking_whatsapp_phone'))
-                            ->tel()
+                            ->helperText(__('panel.pages.booking_whatsapp_help'))
                             ->required()
-                            ->maxLength(32)
-                            ->placeholder('905528255694'),
+                            ->maxLength(20)
+                            ->placeholder('966508891883'),
                     ])
                     ->columns(4),
                 Section::make(__('panel.pages.social_media'))
@@ -145,6 +161,19 @@ class SiteSettings extends Page
         SiteSetting::setValue('booking_end_time', $state['booking_end_time'] ?? '23:00');
         SiteSetting::setValue('booking_is_active', ! empty($state['booking_is_active']) ? '1' : '0');
         SiteSetting::setValue('max_guest_count', (string) max(1, (int) ($state['max_guest_count'] ?? 20)));
+        SiteSetting::setValue(
+            'booking_tables_per_slot',
+            (string) max(1, min(500, (int) ($state['booking_tables_per_slot'] ?? 1))),
+        );
+        $dayCap = $state['booking_max_reservations_per_day'] ?? null;
+        if ($dayCap === null || $dayCap === '') {
+            SiteSetting::setValue('booking_max_reservations_per_day', null);
+        } else {
+            SiteSetting::setValue(
+                'booking_max_reservations_per_day',
+                (string) max(1, min(10000, (int) $dayCap)),
+            );
+        }
         SiteSetting::setValue('booking_whatsapp_phone', self::normalizePhoneForWhatsApp((string) ($state['booking_whatsapp_phone'] ?? '')));
         SiteSetting::setValue('social_instagram_url', $state['social_instagram_url'] ?? null);
         SiteSetting::setValue('social_facebook_url', $state['social_facebook_url'] ?? null);

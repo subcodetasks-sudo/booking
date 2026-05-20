@@ -1,0 +1,64 @@
+<?php
+
+namespace App\Support;
+
+use App\Models\SiteSetting;
+use Carbon\Carbon;
+
+final class BookingConfig
+{
+    public static function tablesPerSlot(): int
+    {
+        $n = (int) SiteSetting::getValue('booking_tables_per_slot', 1);
+
+        return max(1, min(500, $n));
+    }
+
+    public static function maxReservationsPerDay(): ?int
+    {
+        $v = SiteSetting::getValue('booking_max_reservations_per_day', null);
+        if ($v === null || $v === '') {
+            return null;
+        }
+
+        $n = (int) $v;
+
+        return $n > 0 ? min($n, 10000) : null;
+    }
+
+    /**
+     * Hour => start time label (matches public booking hourly slots).
+     *
+     * @return array<int, string>
+     */
+    public static function hourOptionsForFilter(): array
+    {
+        $startAt = (string) SiteSetting::getValue('booking_start_time', '12:00');
+        $endAt = (string) SiteSetting::getValue('booking_end_time', '23:00');
+
+        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $startAt)) {
+            $startAt = '12:00';
+        }
+        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $endAt)) {
+            $endAt = '23:00';
+        }
+
+        if ($startAt >= $endAt) {
+            $startAt = '12:00';
+            $endAt = '23:00';
+        }
+
+        $day = Carbon::today()->toDateString();
+        $cursor = Carbon::parse($day.' '.$startAt);
+        $close = Carbon::parse($day.' '.$endAt);
+
+        $opts = [];
+        while ($cursor->lt($close)) {
+            $h = (int) $cursor->format('H');
+            $opts[$h] = $cursor->format('H:i');
+            $cursor->addHour();
+        }
+
+        return $opts;
+    }
+}

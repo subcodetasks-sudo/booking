@@ -3,6 +3,8 @@
 namespace App\Filament\Widgets;
 
 use App\Models\Reservation;
+use App\Support\BookingConfig;
+use Carbon\Carbon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -12,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 
 class TodayReservationsTable extends TableWidget
 {
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public function table(Table $table): Table
     {
@@ -62,7 +64,7 @@ class TodayReservationsTable extends TableWidget
                     ->state(fn (Reservation $record): bool => $record->addons_total > 0),
                 TextColumn::make('total_amount')
                     ->label(__('panel.dashboard.table.total_amount'))
-                    ->money('AED')
+                    ->money('SAR')
                     ->sortable(),
                 TextColumn::make('created_at')
                     ->label(__('panel.dashboard.table.created_at'))
@@ -77,12 +79,29 @@ class TodayReservationsTable extends TableWidget
                         'pending' => __('panel.statuses.reservation.pending'),
                         'cancelled' => __('panel.statuses.reservation.cancelled'),
                     ]),
+                SelectFilter::make('reservation_hour')
+                    ->label(__('panel.dashboard.table.reservation_hour'))
+                    ->options(static function (): array {
+                        $opts = BookingConfig::hourOptionsForFilter();
+
+                        return collect($opts)
+                            ->mapWithKeys(fn (string $label, int $hour): array => [(string) $hour => $label])
+                            ->all();
+                    })
+                    ->query(function (Builder $query, array $data): Builder {
+                        $v = $data['value'] ?? null;
+                        if ($v === null || $v === '') {
+                            return $query;
+                        }
+
+                        return $query->whereHour('reservation_time', (int) $v);
+                    }),
             ]);
     }
 
     protected function getTableQuery(): Builder
     {
-        return Reservation::query();
+        return Reservation::query()
+            ->whereDate('reservation_date', Carbon::today()->toDateString());
     }
 }
-

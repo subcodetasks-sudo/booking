@@ -6,6 +6,7 @@ use App\Models\Reservation;
 use App\Models\ScheduleDayClosure;
 use App\Models\SiteSetting;
 use App\Models\TimeSlot;
+use App\Support\BookingConfig;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -23,6 +24,8 @@ final class WeekCalendarBuilder
 
         [$bookingStartMin, $bookingEndMin] = $this->bookingWindowMinutes();
         $bookingIsActive = (bool) SiteSetting::getValue('booking_is_active', true);
+        $capacity = BookingConfig::tablesPerSlot();
+        $maxPerDay = BookingConfig::maxReservationsPerDay();
 
         $closureDates = ScheduleDayClosure::query()
             ->whereBetween('closure_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
@@ -34,12 +37,16 @@ final class WeekCalendarBuilder
             ->where('status', '!=', 'cancelled')
             ->get(['id', 'reservation_date', 'reservation_time', 'customer_name']);
 
-        /** @var Collection<string, Reservation> $reservationByDateHour */
-        $reservationByDateHour = $reservations->keyBy(function (Reservation $r): string {
+        /** @var Collection<string, Collection<int, Reservation>> $reservationsByDateHour */
+        $reservationsByDateHour = $reservations->groupBy(function (Reservation $r): string {
             $hour = (int) substr((string) $r->reservation_time, 0, 2);
 
-            return Carbon::parse($r->reservation_date)->toDateString() . '_' . $hour;
+            return Carbon::parse($r->reservation_date)->toDateString().'_'.$hour;
         });
+
+        $reservationsTotalByDay = $reservations
+            ->groupBy(fn (Reservation $r) => Carbon::parse($r->reservation_date)->toDateString())
+            ->map(fn (Collection $g) => $g->count());
 
         $slotsByDate = TimeSlot::query()
             ->whereBetween('slot_date', [$weekStart->toDateString(), $weekEnd->toDateString()])
@@ -59,9 +66,13 @@ final class WeekCalendarBuilder
             $isHoliday = $closureDates->contains($dateStr);
 
             $daySlots = $slotsByDate->get($dateStr, collect());
+            $dayTotal = (int) ($reservationsTotalByDay[$dateStr] ?? 0);
+            $dayCapacityFull = $maxPerDay !== null && $dayTotal >= $maxPerDay;
 
             $cells = [];
             foreach ($hours as $hour) {
+                $key = $dateStr.'_'.$hour;
+                $hourReservations = $reservationsByDateHour->get($key);
                 $cells[] = $this->makeCell(
                     $dateStr,
                     $hour,
@@ -69,8 +80,10 @@ final class WeekCalendarBuilder
                     $bookingStartMin,
                     $bookingEndMin,
                     $bookingIsActive,
-                    $reservationByDateHour->get($dateStr . '_' . $hour),
+                    $hourReservations instanceof Collection ? $hourReservations : collect(),
                     $daySlots,
+                    $dayCapacityFull,
+                    $capacity,
                 );
             }
 
@@ -80,6 +93,7 @@ final class WeekCalendarBuilder
                 'header_primary' => $day->locale($locale)->translatedFormat('l'),
                 'header_secondary' => $day->locale($locale)->translatedFormat('j M'),
                 'is_holiday' => $isHoliday,
+                'day_capacity_full' => $dayCapacityFull,
                 'cells' => $cells,
             ];
         }
@@ -164,12 +178,17 @@ final class WeekCalendarBuilder
         $locale = app()->getLocale();
 
         if ($start->month === $end->month && $start->year === $end->year) {
-            return $start->locale($locale)->translatedFormat('j') . ' – ' . $end->locale($locale)->translatedFormat('j F Y');
+            return $start->locale($locale)->translatedFormat('j').' – '.$end->locale($locale)->translatedFormat('j F Y');
         }
 
-        return $start->locale($locale)->translatedFormat('j M') . ' – ' . $end->locale($locale)->translatedFormat('j F Y');
+        return $start->locale($locale)->translatedFormat('j M').' – '.$end->locale($locale)->translatedFormat('j F Y');
     }
 
+    /**
+     * @param  Collection<int, Reservation>  $hourReservations
+     * @param  Collection<int, TimeSlot>  $daySlots
+     * @return array<string, mixed>
+     */
     private function makeCell(
         string $dateStr,
         int $hour,
@@ -177,68 +196,93 @@ final class WeekCalendarBuilder
         int $bookingStartMin,
         int $bookingEndMin,
         bool $bookingIsActive,
-        ?Reservation $reservation,
+        Collection $hourReservations,
         Collection $daySlots,
+        bool $dayCapacityFull,
+        int $capacity,
     ): array {
+        $reservedCount = $hourReservations->count();
+        $base = [
+            'hour' => $hour,
+            'reserved_count' => $reservedCount,
+            'capacity' => $capacity,
+            'reservation_id' => $hourReservations->first()?->id,
+            'reservation_extra_count' => max(0, $reservedCount - 1),
+            'day_capacity_full' => $dayCapacityFull,
+        ];
+
         if ($isHoliday) {
-            return [
-                'hour' => $hour,
+            return array_merge($base, [
                 'status' => 'holiday',
                 'detail' => null,
-                'reservation_id' => null,
                 'closure_slot_id' => null,
-            ];
+            ]);
         }
 
         if (! $bookingIsActive) {
-            return [
-                'hour' => $hour,
+            return array_merge($base, [
                 'status' => 'disabled',
                 'detail' => null,
-                'reservation_id' => null,
                 'closure_slot_id' => null,
-            ];
+            ]);
         }
 
-        if ($reservation) {
-            return [
-                'hour' => $hour,
-                'status' => 'booked',
-                'detail' => $reservation->customer_name,
-                'reservation_id' => $reservation->id,
+        if ($dayCapacityFull && $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin)) {
+            return array_merge($base, [
+                'status' => 'unavailable',
+                'detail' => __('panel.dashboard.calendar.day_capacity_full_hint'),
                 'closure_slot_id' => null,
-            ];
+            ]);
+        }
+
+        if ($reservedCount >= $capacity) {
+            $first = $hourReservations->first();
+            $detail = $first ? (string) $first->customer_name : null;
+            if ($reservedCount > 1) {
+                $detail = __('panel.dashboard.calendar.booked_slot_summary', [
+                    'count' => $reservedCount,
+                    'name' => $detail ?? '',
+                ]);
+            }
+
+            return array_merge($base, [
+                'status' => 'booked',
+                'detail' => $detail,
+                'closure_slot_id' => null,
+            ]);
         }
 
         $manualClosedSlot = $this->findManualClosedSlotCovering($daySlots, $hour);
 
         if ($manualClosedSlot) {
-            return [
-                'hour' => $hour,
+            return array_merge($base, [
                 'status' => 'unavailable',
                 'detail' => null,
-                'reservation_id' => null,
                 'closure_slot_id' => $manualClosedSlot->id,
-            ];
+            ]);
         }
 
         if (! $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin)) {
-            return [
-                'hour' => $hour,
+            return array_merge($base, [
                 'status' => 'outside',
                 'detail' => null,
-                'reservation_id' => null,
                 'closure_slot_id' => null,
-            ];
+            ]);
         }
 
-        return [
-            'hour' => $hour,
+        $detail = null;
+        if ($reservedCount > 0) {
+            $detail = __('panel.dashboard.calendar.slot_usage', [
+                'current' => $reservedCount,
+                'capacity' => $capacity,
+            ]);
+        }
+
+        return array_merge($base, [
             'status' => 'available',
-            'detail' => null,
-            'reservation_id' => null,
+            'detail' => $detail,
             'closure_slot_id' => null,
-        ];
+        ]);
     }
 
     private function findManualClosedSlotCovering(Collection $daySlots, int $hour): ?TimeSlot

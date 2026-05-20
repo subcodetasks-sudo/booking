@@ -4,7 +4,6 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Pages\SiteSettings;
 use App\Filament\Resources\Reservations\ReservationResource;
-use App\Models\Reservation;
 use App\Models\ScheduleDayClosure;
 use App\Models\TimeSlot;
 use App\Services\WeekCalendarBuilder;
@@ -20,7 +19,7 @@ class SchedulingCalendarWidget extends Widget
 
     protected string $view = 'filament.widgets.scheduling-calendar';
 
-    protected int | string | array $columnSpan = 'full';
+    protected int|string|array $columnSpan = 'full';
 
     public int $weekOffset = 0;
 
@@ -184,6 +183,8 @@ class SchedulingCalendarWidget extends Widget
                 'status' => $status,
                 'detail' => $cell['detail'] ?? null,
                 'reservation_id' => $cell['reservation_id'] ?? null,
+                'reserved_count' => (int) ($cell['reserved_count'] ?? 0),
+                'capacity' => (int) ($cell['capacity'] ?? 1),
             ];
         }
 
@@ -282,16 +283,6 @@ class SchedulingCalendarWidget extends Widget
     {
         $d = Carbon::parse($date)->toDateString();
         $time = sprintf('%02d:00:00', $hour);
-
-        Reservation::query()
-            ->whereDate('reservation_date', $d)
-            ->where('status', '!=', 'cancelled')
-            ->whereTime('reservation_time', $time)
-            ->update([
-                'status' => 'cancelled',
-                'cancelled_at' => now(),
-                'cancel_reason' => __('panel.dashboard.calendar.cancel_reason_reopened'),
-            ]);
 
         TimeSlot::query()
             ->whereDate('slot_date', $d)

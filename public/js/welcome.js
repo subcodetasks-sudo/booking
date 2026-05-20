@@ -187,16 +187,28 @@ async function renderSlotGrid(dateStr, preserveSelection = false, showPreferredT
     const slots = await getAvailabilityForDate(dateStr);
     const word = i18n[currentLang].slotBooked;
     const meta = i18n[currentLang].slotBookingKind;
+    const spotsLbl = i18n[currentLang].slotSpotsLeft;
 
-    const available = slots.filter((s) => !s.is_unavailable).map((s) => s.time);
-    const booked = slots.filter((s) => s.is_unavailable).map((s) => s.time);
+    const availableSlots = slots.filter((s) => !s.is_unavailable);
+    const bookedSlots = slots.filter((s) => s.is_unavailable);
+    const available = availableSlots.map((s) => s.time);
+    const booked = bookedSlots.map((s) => s.time);
 
-    gridAvail.innerHTML = available.map((t) => (
-        `<button type="button" class="slot-card-available" data-slot="${t}" aria-label="${t}">`
-        + `<span class="slot-card-time">${t}</span>`
-        + `<span class="slot-card-meta">${meta}${SLOT_BOOKING_META_ICON}</span>`
-        + '</button>'
-    )).join('');
+    gridAvail.innerHTML = availableSlots.map((s) => {
+        const t = s.time;
+        const cap = Number(s.capacity || 1);
+        const rem = Number.isFinite(Number(s.spots_remaining))
+            ? Number(s.spots_remaining)
+            : Math.max(cap - Number(s.reserved || 0), 0);
+        const spotsHtml = cap > 1 && rem > 0
+            ? `<span class="slot-card-spots">${spotsLbl.replace(':n', String(rem))}</span>`
+            : '';
+        return `<button type="button" class="slot-card-available" data-slot="${t}" aria-label="${t}">`
+            + `<span class="slot-card-time">${t}</span>`
+            + spotsHtml
+            + `<span class="slot-card-meta">${meta}${SLOT_BOOKING_META_ICON}</span>`
+            + '</button>';
+    }).join('');
 
     gridBook.innerHTML = booked.map((t) => (
         `<div class="slot-card-booked" data-slot-time="${t}" aria-label="${word} ${t}">`
@@ -289,7 +301,7 @@ function renderReservationAddons() {
         return `<div class="addon-item" data-addon-id="${id}" data-addon-name="${safeName}" data-addon-price="${price}">
             <div>
                 <div class="addon-title">${name}</div>
-                <div class="addon-price">${price} AED</div>
+                <div class="addon-price">${price} SAR</div>
             </div>
             <div class="qty-box">
                 <button class="qty-btn minus" type="button">-</button>
@@ -511,6 +523,7 @@ const i18n = {
         slotAccordionAvailable: 'المواعيد المتاحة',
         slotAccordionBooked: 'المواعيد المحجوزة',
         slotBookingKind: 'حجز طاولة',
+        slotSpotsLeft: 'متبقي :n طاولة',
         slotBooked: 'موجود',
         slotNoneAvailable: 'لا توجد مواعيد متاحة في هذا اليوم بعد.',
         slotNoneBookedDisplay: 'لا توجد مواعيد محجوزة لهذا اليوم.',
@@ -616,6 +629,7 @@ const i18n = {
         slotAccordionAvailable: 'Available times',
         slotAccordionBooked: 'Booked times',
         slotBookingKind: 'Table booking',
+        slotSpotsLeft: ':n spots left',
         slotBooked: 'Booked',
         slotNoneAvailable: 'No open times left for this day.',
         slotNoneBookedDisplay: 'No booked slots to show for this day.',
@@ -1213,7 +1227,7 @@ function collectAddons() {
 
     const listSep = currentLang === 'ar' ? '، ' : ', ';
     document.getElementById('addons-summary').textContent = items.length ? items.join(listSep) : tr('addonsNone');
-    document.getElementById('addons-total').textContent = `${total} AED`;
+    document.getElementById('addons-total').textContent = `${total} SAR`;
 
     return { items, total, addons };
 }
@@ -1258,7 +1272,7 @@ function buildWhatsAppMessage(name, phone, addons) {
         `${L.waTime}: ${selectedSlot}`,
         `${L.waGuests}: ${document.getElementById('guest_count')?.value}`,
         `${L.waAddons}: ${addons.items.length ? addons.items.join(listSep) : L.waAddonsNone}`,
-        `${L.waTotal}: ${addons.total} AED`,
+        `${L.waTotal}: ${addons.total} SAR`,
         `${L.allergyMain}: ${getAllergiesForMessage()}`,
         `${L.waNotes}: ${document.getElementById('reservation_notes')?.value || '-'}`,
     ].join('\n');

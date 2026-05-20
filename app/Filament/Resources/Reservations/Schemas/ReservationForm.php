@@ -83,17 +83,17 @@ class ReservationForm
                             ->required()
                             ->numeric()
                             ->default(0.0)
-                            ->prefix('AED'),
+                            ->prefix('SAR'),
                         TextInput::make('items_total')
                             ->required()
                             ->numeric()
                             ->default(0.0)
-                            ->prefix('AED'),
+                            ->prefix('SAR'),
                         TextInput::make('total_amount')
                             ->required()
                             ->numeric()
                             ->default(0.0)
-                            ->prefix('AED'),
+                            ->prefix('SAR'),
                     ]),
                 Section::make(__('panel.forms.reservation.section_status_meta'))
                     ->columns(2)

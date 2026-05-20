@@ -115,11 +115,11 @@
                                     <span class="scheduling-card__detail">{{ $slot['detail'] }}</span>
                                 @elseif ($status === 'available')
                                     <span class="scheduling-card__detail scheduling-card__detail--muted">
-                                        {{ __('panel.dashboard.calendar.ready_to_book') }}
+                                        {{ $slot['detail'] ?: __('panel.dashboard.calendar.ready_to_book') }}
                                     </span>
                                 @elseif ($status === 'unavailable')
                                     <span class="scheduling-card__detail scheduling-card__detail--muted">
-                                        {{ __('panel.dashboard.calendar.manual_close') }}
+                                        {{ $slot['detail'] ?: __('panel.dashboard.calendar.manual_close') }}
                                     </span>
                                 @endif
                             </div>

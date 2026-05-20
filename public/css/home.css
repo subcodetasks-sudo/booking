@@ -1547,6 +1547,14 @@ html, body {
             height: auto;
             border-radius: 12px;
         }
+        .slot-card-available .slot-card-spots {
+            display: block;
+            margin-top: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            color: #476040;
+            line-height: 1.25;
+        }
 
         /* قائمة التواصل العائمة */
         .social-fab {
@@ -1659,7 +1667,24 @@ html, body {
             }
         }
 
-        @media (max-width: 900px) { .grid-4, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); } .features { grid-template-columns: repeat(2, minmax(0, 1fr)); } .booking-form { min-height: 380px; } }
+        @media (max-width: 900px) {
+            .grid-4, .grid-3 { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .features { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .booking-form { min-height: 380px; }
+            .website-qr-card {
+                width: min(640px, calc(100% - 40px));
+                grid-template-columns: 1fr auto;
+                gap: 18px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .website-qr-frame {
+                width: min(140px, 28vw);
+                max-width: 160px;
+                flex-shrink: 0;
+            }
+            .website-qr-copy { text-align: right; }
+        }
         @media (max-width: 560px) {
             .hero-top-bar { padding: 10px 12px 0; min-height: 88px; }
             .hero-top-bar .lang-switch { top: 14px; left: max(10px, env(safe-area-inset-left)); }

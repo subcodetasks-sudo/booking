@@ -29,6 +29,11 @@ return [
         'booking_is_active' => 'Enable booking during these hours',
         'max_guest_count' => 'Maximum guests',
         'booking_whatsapp_phone' => 'Booking WhatsApp phone',
+        'booking_whatsapp_help' => 'Enter the full international number without + or spaces (e.g. 966508891883).',
+        'booking_tables_per_slot' => 'Tables (bookings) per hour',
+        'booking_tables_per_slot_description' => 'How many reservations are allowed at the same start time on the same day.',
+        'booking_max_reservations_per_day' => 'Max reservations per day',
+        'booking_max_reservations_per_day_description' => 'Leave empty for no daily cap. When reached, the site stops accepting new bookings for that date.',
         'social_media' => 'Social Media Links',
         'social_media_description' => 'These links appear in the floating social media button on the booking page. The WhatsApp link is also used when sending booking details.',
         'social_instagram_url' => 'Instagram URL',
@@ -81,7 +86,7 @@ return [
             'view_booking' => 'View booking',
             'heading' => 'Weekly schedule',
             'add_available' => 'New reservation',
-           // 'copy_week' => 'Copy schedule',
+            // 'copy_week' => 'Copy schedule',
             'availability_settings' => 'Availability settings',
             'today' => 'Today',
             'prev_week' => 'Previous week',
@@ -99,15 +104,18 @@ return [
             'legend_unavailable' => 'Unavailable',
             'confirm_toggle_day' => 'Toggle full-day closure for this date?',
             'confirm_block_hour' => 'Block this hour from bookings?',
-            'confirm_open_hour' => 'Open this hour again?',
+            'confirm_open_hour' => 'Remove the manual block for this hour? (Existing reservations stay as they are.)',
             'day_closed' => 'Day marked as closed.',
             'day_opened' => 'Day reopened.',
             'hour_blocked' => 'Hour blocked.',
             'hour_opened' => 'Hour opened.',
             'cancel_reason_reopened' => 'Reservation cancelled from dashboard to reopen this time.',
             'block_denied_booked' => 'There is already a reservation at this time.',
-          //  'copy_soon' => 'Copy schedule',
-         //   'copy_soon_body' => 'This feature will be available soon.',
+            'day_capacity_full_hint' => 'Daily reservation limit reached.',
+            'booked_slot_summary' => ':count bookings — :name',
+            'slot_usage' => ':current / :capacity booked',
+            //  'copy_soon' => 'Copy schedule',
+            //   'copy_soon_body' => 'This feature will be available soon.',
         ],
         'table' => [
             'reservation_code' => 'Reservation code',
@@ -120,7 +128,13 @@ return [
             'has_addons' => 'Add-ons',
             'total_amount' => 'Total amount',
             'created_at' => 'Created at',
+            'reservation_hour' => 'Hour',
         ],
+    ],
+
+    'booking' => [
+        'slot_full' => 'This time slot is full. Please pick another time.',
+        'day_capacity_reached' => 'The maximum number of reservations for this day has been reached.',
     ],
 
     'statuses' => [
@@ -237,4 +251,3 @@ return [
         ],
     ],
 ];
-

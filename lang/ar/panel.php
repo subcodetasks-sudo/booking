@@ -29,6 +29,11 @@ return [
         'booking_is_active' => 'تفعيل الحجز بهذه الساعات',
         'max_guest_count' => 'الحد الأقصى لعدد الأفراد',
         'booking_whatsapp_phone' => 'رقم واتساب الحجوزات',
+        'booking_whatsapp_help' => 'أدخل الرقم بالصيغة الدولية بدون + أو مسافات (مثال: 966508891883).',
+        'booking_tables_per_slot' => 'عدد الطاولات لكل ساعة',
+        'booking_tables_per_slot_description' => 'عدد الحجوزات المسموح بها في نفس الساعة (نفس يوم الحجز).',
+        'booking_max_reservations_per_day' => 'الحد الأقصى لحجوزات اليوم',
+        'booking_max_reservations_per_day_description' => 'اتركه فارغًا لعدم وجود حد يومي. عند الامتلاء لا يقبل الموقع حجوزات جديدة ذلك اليوم.',
         'social_media' => 'روابط السوشيال ميديا',
         'social_media_description' => 'هذه الروابط تظهر في زر السوشيال ميديا العائم في صفحة الحجز، ويُستخدم رابط واتساب أيضًا عند إرسال تفاصيل الحجز.',
         'social_instagram_url' => 'رابط Instagram',
@@ -81,7 +86,7 @@ return [
             'view_booking' => 'عرض الحجز',
             'heading' => 'جدول المواعيد الأسبوعي',
             'add_available' => 'إضافة حجز',
-         //   'copy_week' => 'نسخ الجدول',
+            //   'copy_week' => 'نسخ الجدول',
             'availability_settings' => 'إعدادات التوفر',
             'today' => 'اليوم',
             'prev_week' => 'الأسبوع السابق',
@@ -99,14 +104,17 @@ return [
             'legend_unavailable' => 'غير متاح',
             'confirm_toggle_day' => 'تبديل إغلاق هذا اليوم بالكامل؟',
             'confirm_block_hour' => 'تعطيل هذا الساعة للحجوزات؟',
-            'confirm_open_hour' => 'إعادة فتح هذه الساعة؟',
+            'confirm_open_hour' => 'إزالة الإغلاق اليدوي لهذه الساعة؟ (لن يُلغَى أي حجز موجود.)',
             'day_closed' => 'تم تعليم اليوم كغير متاح.',
             'day_opened' => 'تم إعادة فتح اليوم.',
             'hour_blocked' => 'تم تعطيل الساعة.',
             'hour_opened' => 'تم جعل الساعة متاحة.',
             'cancel_reason_reopened' => 'تم إلغاء الحجز من الداشبورد لإعادة فتح الوقت.',
             'block_denied_booked' => 'يوجد حجز في هذا الوقت؛ لا يمكن تعطيل الساعة.',
-            //'copy_soon_body' => 'ستتوفر هذه الميزة قريبًا.',
+            'day_capacity_full_hint' => 'اليوم وصل للحد الأقصى من الحجوزات.',
+            'booked_slot_summary' => ':count حجوزات — أولها :name',
+            'slot_usage' => 'محجوز :current من :capacity',
+            // 'copy_soon_body' => 'ستتوفر هذه الميزة قريبًا.',
         ],
         'table' => [
             'reservation_code' => 'رقم الحجز',
@@ -119,7 +127,13 @@ return [
             'has_addons' => 'إضافات',
             'total_amount' => 'القيمة الإجمالية',
             'created_at' => 'وقت الإنشاء',
+            'reservation_hour' => 'الساعة',
         ],
+    ],
+
+    'booking' => [
+        'slot_full' => 'هذه الساعة ممتلئة. اختر وقتًا آخر.',
+        'day_capacity_reached' => 'تم بلوغ الحد الأقصى لحجوزات هذا اليوم.',
     ],
 
     'statuses' => [
@@ -236,4 +250,3 @@ return [
         ],
     ],
 ];
-

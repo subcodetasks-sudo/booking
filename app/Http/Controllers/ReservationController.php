@@ -10,6 +10,7 @@ use App\Models\ReservationAddon;
 use App\Models\ScheduleDayClosure;
 use App\Models\SiteSetting;
 use App\Models\TimeSlot;
+use App\Support\BookingConfig;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -105,6 +106,14 @@ class ReservationController extends Controller
         }
 
         $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
+        $capacity = BookingConfig::tablesPerSlot();
+        $maxPerDay = BookingConfig::maxReservationsPerDay();
+
+        $dayTotal = Reservation::query()
+            ->whereDate('reservation_date', $date->toDateString())
+            ->where('status', '!=', 'cancelled')
+            ->count();
+        $dayCapacityFull = $maxPerDay !== null && $dayTotal >= $maxPerDay;
 
         $reservedByTime = Reservation::query()
             ->whereDate('reservation_date', $date->toDateString())
@@ -120,33 +129,49 @@ class ReservationController extends Controller
 
         $counts = ['available' => 0, 'booked' => 0, 'blocked' => 0, 'total' => 0];
 
-        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots, &$counts): array {
+        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots, $capacity, $dayCapacityFull, &$counts): array {
             $reserved = (int) ($reservedByTime[$start.':00'] ?? $reservedByTime[$start] ?? 0);
             $isClosedManually = $this->slotIsManuallyClosed($manualClosedSlots, $start);
 
-            if ($reserved > 0) {
-                $status = 'booked';
+            if ($dayCapacityFull) {
+                $status = 'blocked';
+                $isUnavailable = true;
+                $spotsLeft = 0;
             } elseif ($isClosedManually) {
                 $status = 'blocked';
+                $isUnavailable = true;
+                $spotsLeft = 0;
+            } elseif ($reserved >= $capacity) {
+                $status = 'booked';
+                $isUnavailable = true;
+                $spotsLeft = 0;
             } else {
                 $status = 'available';
+                $isUnavailable = false;
+                $spotsLeft = $capacity - $reserved;
             }
 
             $counts['total']++;
-            $counts[$status]++;
-
-            $isUnavailable = $status !== 'available';
+            if ($status === 'booked') {
+                $counts['booked']++;
+            } elseif ($status === 'blocked') {
+                $counts['blocked']++;
+            } else {
+                $counts['available']++;
+            }
 
             return [
                 'time' => $start,
                 'end_time' => Carbon::createFromFormat('H:i', $start)->addHour()->format('H:i'),
-                'capacity' => 1,
+                'capacity' => $capacity,
                 'reserved' => $reserved,
                 'held' => 0,
-                'available' => $isUnavailable ? 0 : 1,
+                'spots_remaining' => $spotsLeft,
+                'available' => $spotsLeft > 0 ? 1 : 0,
                 'is_unavailable' => $isUnavailable,
                 'is_closed_manually' => $isClosedManually,
                 'status' => $status,
+                'day_capacity_full' => $dayCapacityFull,
             ];
         })->all();
 
@@ -154,6 +179,10 @@ class ReservationController extends Controller
             'date' => $date->toDateString(),
             'booking_active' => true,
             'day_closed' => false,
+            'day_capacity_full' => $dayCapacityFull,
+            'day_reservations_total' => $dayTotal,
+            'day_max_reservations' => $maxPerDay,
+            'tables_per_slot' => $capacity,
             'booking_start' => $startAt,
             'booking_end' => $endAt,
             'counts' => $counts,
@@ -230,6 +259,9 @@ class ReservationController extends Controller
             [$startAt, $endAt] = $this->getBookingWindow();
             $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
 
+            $capacity = BookingConfig::tablesPerSlot();
+            $maxPerDay = BookingConfig::maxReservationsPerDay();
+
             $requestedTime = substr((string) $data['reservation_time'], 0, 5);
             if (! in_array($requestedTime, $timeKeys, true)) {
                 throw ValidationException::withMessages([
@@ -237,17 +269,27 @@ class ReservationController extends Controller
                 ]);
             }
 
-            $reservedTimes = Reservation::query()
+            if ($maxPerDay !== null) {
+                $dayReservationCount = Reservation::query()
+                    ->whereDate('reservation_date', $date->toDateString())
+                    ->where('status', '!=', 'cancelled')
+                    ->count();
+                if ($dayReservationCount >= $maxPerDay) {
+                    throw ValidationException::withMessages([
+                        'reservation_date' => __('panel.booking.day_capacity_reached'),
+                    ]);
+                }
+            }
+
+            $slotReservedCount = Reservation::query()
                 ->whereDate('reservation_date', $date->toDateString())
                 ->where('status', '!=', 'cancelled')
-                ->pluck('reservation_time')
-                ->map(fn ($v) => substr((string) $v, 0, 5))
-                ->all();
-            $reservedSet = array_flip($reservedTimes);
+                ->whereTime('reservation_time', '=', $requestedTime.':00')
+                ->count();
 
-            if (isset($reservedSet[$requestedTime])) {
+            if ($slotReservedCount >= $capacity) {
                 throw ValidationException::withMessages([
-                    'reservation_time' => 'الوقت المختار محجوز. اختر وقتًا متاحًا آخر.',
+                    'reservation_time' => __('panel.booking.slot_full'),
                 ]);
             }
 

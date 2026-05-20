@@ -69,7 +69,7 @@ class ReservationInfolist
                                     ->label(__('panel.forms.reservation.quantity')),
                                 TextEntry::make('pivot.line_total')
                                     ->label(__('panel.forms.reservation.line_total'))
-                                    ->money('AED'),
+                                    ->money('SAR'),
                             ])
                             ->columns(3),
                         TextEntry::make('allergies_notes')
@@ -86,13 +86,13 @@ class ReservationInfolist
                     ->components([
                         TextEntry::make('addons_total')
                             ->label(__('panel.forms.reservation.addons_total'))
-                            ->money('AED'),
+                            ->money('SAR'),
                         TextEntry::make('items_total')
                             ->label(__('panel.forms.reservation.items_total'))
-                            ->money('AED'),
+                            ->money('SAR'),
                         TextEntry::make('total_amount')
                             ->label(__('panel.dashboard.table.total_amount'))
-                            ->money('AED'),
+                            ->money('SAR'),
                     ]),
                 Section::make(__('panel.forms.reservation.section_audit'))
                     ->columns(2)
