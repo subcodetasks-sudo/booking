@@ -89,12 +89,12 @@
                         <div class="counter-control">
                             <button id="guest-plus" class="counter-btn" type="button">+</button>
                             <div>
-                                <span id="guest-count-display" class="counter-value">2</span>
+                                <span id="guest-count-display" class="counter-value">1</span>
                                 {{-- <span class="counter-caption">أفراد</span> --}}
                             </div>
                             <button id="guest-minus" class="counter-btn" type="button">-</button>
                         </div>
-                        <input id="guest_count" type="hidden" value="2" min="1" max="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}" required>
+                        <input id="guest_count" type="hidden" value="1" min="1" max="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}" required>
                     </div>
                     <div class="field"><label for="reservation_time" id="label-reservation-time">الوقت المبدئي</label><input id="reservation_time" class="booking-time-input" type="time" required></div>
                 </div>

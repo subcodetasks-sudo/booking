@@ -364,7 +364,7 @@ function persistBookingDraft() {
             reservation_date: document.getElementById('reservation_date')?.value || '',
             reservation_time_input: document.getElementById('reservation_time')?.value || '',
             selected_slot: selectedSlot || '',
-            guest_count: document.getElementById('guest_count')?.value || '2',
+            guest_count: document.getElementById('guest_count')?.value || '1',
             customer_name: document.getElementById('customer_name')?.value || '',
             customer_phone: document.getElementById('customer_phone')?.value || '',
             customer_email: document.getElementById('customer_email')?.value || '',
@@ -408,7 +408,7 @@ function restoreBookingDraft() {
         setValue('reservation_notes', draft.reservation_notes || '');
 
         if (guestCountInput && guestCountDisplay) {
-            syncGuestCount(draft.guest_count || 2);
+            syncGuestCount(draft.guest_count || 1);
         }
 
         selectedSlot = draft.selected_slot || '';
@@ -1690,7 +1690,7 @@ setupHeroSlider();
 
 if (guestPlusButton && guestMinusButton && guestCountInput && guestCountDisplay) {
     guestCountInput.max = String(MAX_GUEST_COUNT);
-    syncGuestCount(guestCountInput.value || 2);
+    syncGuestCount(guestCountInput.value || 1);
 
     guestPlusButton.addEventListener('click', () => {
         syncGuestCount(Number(guestCountInput.value) + 1);
