@@ -24,7 +24,7 @@ final class WeekCalendarBuilder
 
         [$bookingStartMin, $bookingEndMin] = $this->bookingWindowMinutes();
         $bookingIsActive = (bool) SiteSetting::getValue('booking_is_active', true);
-        $capacity = BookingConfig::tablesPerSlot();
+        $capacity = BookingConfig::BOOKINGS_PER_HOURLY_SLOT;
         $maxPerDay = BookingConfig::maxReservationsPerDay();
 
         $closureDates = ScheduleDayClosure::query()

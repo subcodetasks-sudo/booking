@@ -106,7 +106,7 @@ class ReservationController extends Controller
         }
 
         $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
-        $capacity = BookingConfig::tablesPerSlot();
+        $capacity = BookingConfig::BOOKINGS_PER_HOURLY_SLOT;
         $maxPerDay = BookingConfig::maxReservationsPerDay();
 
         $dayTotal = Reservation::query()
@@ -182,7 +182,7 @@ class ReservationController extends Controller
             'day_capacity_full' => $dayCapacityFull,
             'day_reservations_total' => $dayTotal,
             'day_max_reservations' => $maxPerDay,
-            'tables_per_slot' => $capacity,
+            'bookings_per_hour_slot' => $capacity,
             'booking_start' => $startAt,
             'booking_end' => $endAt,
             'counts' => $counts,
@@ -259,7 +259,7 @@ class ReservationController extends Controller
             [$startAt, $endAt] = $this->getBookingWindow();
             $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
 
-            $capacity = BookingConfig::tablesPerSlot();
+            $capacity = BookingConfig::BOOKINGS_PER_HOURLY_SLOT;
             $maxPerDay = BookingConfig::maxReservationsPerDay();
 
             $requestedTime = substr((string) $data['reservation_time'], 0, 5);

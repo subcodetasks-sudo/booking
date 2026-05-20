@@ -8,12 +8,11 @@ use Illuminate\Database\Eloquent\Builder;
 
 final class BookingConfig
 {
-    public static function tablesPerSlot(): int
-    {
-        $n = (int) SiteSetting::getValue('booking_tables_per_slot', 1);
-
-        return max(1, min(500, $n));
-    }
+    /**
+     * Exactly one hourly reservation slot (one booking per clock hour).
+     * Total volume per calendar day is limited by {@see maxReservationsPerDay()}.
+     */
+    public const BOOKINGS_PER_HOURLY_SLOT = 1;
 
     public static function maxReservationsPerDay(): ?int
     {
