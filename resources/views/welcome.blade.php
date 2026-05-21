@@ -83,7 +83,13 @@
             <div id="step-1">
                 <div class="form-section-title centered" id="step-1-title"> اختيار الموعد</div>
                 <div class="grid grid-3">
-                    <div class="field"><label for="reservation_date" id="label-reservation-date">تاريخ الحجز</label><input id="reservation_date" class="booking-date-input" type="date" min="{{ now()->toDateString() }}" required></div>
+                    <div class="field">
+                        <label for="reservation_date" id="label-reservation-date">تاريخ الحجز</label>
+                        <div class="booking-native-input-wrap" data-native-input="reservation_date">
+                            <input id="reservation_date" class="booking-date-input" type="date" min="{{ now()->toDateString() }}" required>
+                            <span class="booking-native-input-hint" id="hint-reservation-date" aria-hidden="true">اختر التاريخ</span>
+                        </div>
+                    </div>
                     <div class="field">
                         <label for="guest_count" id="label-guest-count">عدد الأفراد</label>
                         <div class="counter-control">
@@ -96,7 +102,13 @@
                         </div>
                         <input id="guest_count" type="hidden" value="1" min="1" max="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}" required>
                     </div>
-                    <div class="field"><label for="reservation_time" id="label-reservation-time">الوقت المبدئي</label><input id="reservation_time" class="booking-time-input" type="time" required></div>
+                    <div class="field">
+                        <label for="reservation_time" id="label-reservation-time">الوقت المبدئي</label>
+                        <div class="booking-native-input-wrap" data-native-input="reservation_time">
+                            <input id="reservation_time" class="booking-time-input" type="time" required>
+                            <span class="booking-native-input-hint" id="hint-reservation-time" aria-hidden="true">اختر الوقت</span>
+                        </div>
+                    </div>
                 </div>
                 <div class="actions actions-centered"><button id="search-slots" class="btn" type="button">الخطوة التالية</button></div>
                 <div id="availability" class="availability hidden">

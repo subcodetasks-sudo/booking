@@ -116,6 +116,7 @@ function selectAvailableSlot(slot) {
     const timeInput = document.getElementById('reservation_time');
     if (timeInput && normalizeSlotTime(timeInput.value) !== slot) {
         timeInput.value = slot;
+        syncNativeInputHints();
     }
 
     return true;
@@ -402,6 +403,7 @@ function restoreBookingDraft() {
 
         setValue('reservation_date', draft.reservation_date || '');
         setValue('reservation_time', draft.reservation_time_input || '');
+        syncNativeInputHints();
         setValue('customer_name', draft.customer_name || '');
         setValue('customer_phone', draft.customer_phone || '');
         setValue('customer_email', draft.customer_email || '');
@@ -463,8 +465,10 @@ const i18n = {
         step2Title: 'الإضافات والطلبات',
         step3Title: 'البيانات الشخصية وتأكيد الطلب',
         labelReservationDate: 'تاريخ الحجز',
+        hintReservationDate: 'اختر التاريخ',
         labelGuestCount: 'عدد الأفراد',
         labelReservationTime: 'الوقت المبدئي',
+        hintReservationTime: 'اختر الوقت',
         labelCustomerName: 'الاسم الكامل',
         labelCustomerPhone: 'رقم الجوال',
         labelCustomerEmail: 'البريد الإلكتروني',
@@ -569,8 +573,10 @@ const i18n = {
         step2Title: 'Extras & requests',
         step3Title: 'Your details & booking confirmation',
         labelReservationDate: 'Reservation date',
+        hintReservationDate: 'Select date',
         labelGuestCount: 'Party size',
         labelReservationTime: 'Preferred time',
+        hintReservationTime: 'Select time',
         labelCustomerName: 'Full name',
         labelCustomerPhone: 'Mobile number',
         labelCustomerEmail: 'Email address',
@@ -1043,6 +1049,11 @@ function applyLanguage(lang) {
     if (labelGuests) labelGuests.textContent = L.labelGuestCount;
     const labelTime = document.getElementById('label-reservation-time');
     if (labelTime) labelTime.textContent = L.labelReservationTime;
+    const hintDate = document.getElementById('hint-reservation-date');
+    if (hintDate) hintDate.textContent = L.hintReservationDate;
+    const hintTime = document.getElementById('hint-reservation-time');
+    if (hintTime) hintTime.textContent = L.hintReservationTime;
+    syncNativeInputHints();
     const labelName = document.getElementById('label-customer-name');
     if (labelName) labelName.textContent = L.labelCustomerName;
     const labelPhone = document.getElementById('label-customer-phone');
@@ -1164,6 +1175,13 @@ function applyLanguage(lang) {
     if (typeof getCurrentStep === 'function' && getCurrentStep() === 3) {
         renderFinalSummary();
     }
+}
+
+function syncNativeInputHints() {
+    document.querySelectorAll('.booking-native-input-wrap').forEach((wrap) => {
+        const input = wrap.querySelector('input');
+        wrap.classList.toggle('is-filled', Boolean(input?.value));
+    });
 }
 
 function syncGuestCount(value) {
@@ -1443,6 +1461,13 @@ document.getElementById('slot-grid-available')?.addEventListener('click', (e) =>
     selectAvailableSlot(btn.dataset.slot || '');
     clearFieldError(document.getElementById('reservation_time'));
     persistBookingDraft();
+});
+
+['reservation_date', 'reservation_time'].forEach((id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.addEventListener('input', syncNativeInputHints);
+    el.addEventListener('change', syncNativeInputHints);
 });
 
 document.getElementById('reservation_date')?.addEventListener('change', () => {
@@ -1728,6 +1753,7 @@ langButtons.forEach((button) => {
 
 /** Apply saved UI language before async loaders finish so headings/labels match pills immediately. */
 applyLanguage(currentLang);
+syncNativeInputHints();
 
 function setupSocialFab() {
     const root = document.getElementById('social-fab');

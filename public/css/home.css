@@ -389,9 +389,34 @@ html, body {
                 0 3px 12px rgba(47, 39, 28, 0.1),
                 inset 0 1px 0 rgba(255, 255, 255, 0.95);
         }
+        .booking-native-input-wrap {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            min-width: 0;
+        }
+        .booking-native-input-hint {
+            position: absolute;
+            inset-block: 0;
+            inset-inline: 15px 46px;
+            display: flex;
+            align-items: center;
+            pointer-events: none;
+            color: #5c5348;
+            font-size: inherit;
+            font-weight: 600;
+            line-height: 1.35;
+            z-index: 1;
+        }
+        .booking-native-input-wrap.is-filled .booking-native-input-hint,
+        .booking-native-input-wrap:focus-within .booking-native-input-hint {
+            display: none;
+        }
         .booking-date-input,
         .booking-time-input {
             display: block;
+            position: relative;
+            z-index: 2;
             width: 100% !important;
             max-width: 100% !important;
             min-width: 0 !important;
@@ -399,9 +424,19 @@ html, body {
             border-color: #a18c71 !important;
             border-radius: 14px !important;
             background-color: #fffefb !important;
-            padding-inline-end: 46px !important;
+            /* LTR keeps date/time text visible inside RTL pages (iOS Safari) */
+            direction: ltr;
+            text-align: left;
+            unicode-bidi: isolate;
+            padding-block: 16px !important;
+            padding-inline: 15px 46px !important;
             font-weight: 600;
             letter-spacing: 0.02em;
+            line-height: 1.35;
+            color: #1f1b17 !important;
+            color-scheme: light;
+            -webkit-appearance: auto;
+            appearance: auto;
             transition: border-color .16s ease, box-shadow .16s ease, background-color .16s ease;
         }
         .booking-date-input:focus,
@@ -413,10 +448,27 @@ html, body {
                 inset 0 1px 0 rgba(255, 255, 255, 0.98) !important;
             background-color: #fff;
         }
+        .booking-date-input::-webkit-datetime-edit,
+        .booking-time-input::-webkit-datetime-edit,
+        .booking-date-input::-webkit-datetime-edit-fields-wrapper,
+        .booking-time-input::-webkit-datetime-edit-fields-wrapper {
+            display: inline-flex;
+            align-items: center;
+            min-width: 0;
+            padding: 0;
+            color: #1f1b17;
+        }
+        .booking-date-input::-webkit-date-and-time-value,
+        .booking-time-input::-webkit-date-and-time-value {
+            text-align: left;
+            min-height: 1.25em;
+            color: #1f1b17;
+        }
         .booking-date-input::-webkit-calendar-picker-indicator,
         .booking-time-input::-webkit-calendar-picker-indicator {
-            opacity: .85;
+            opacity: .9;
             cursor: pointer;
+            margin-inline-start: 6px;
             filter: contrast(1.05) saturate(1.1);
         }
         .field select {
@@ -1793,11 +1845,15 @@ html, body {
             .booking-form {
                 min-height: 380px;
                 padding: 28px 20px;
+                overflow-x: visible;
             }
             .booking-date-input,
             .booking-time-input {
-                padding-inline-end: 40px !important;
+                padding-inline: 14px 40px !important;
                 font-size: 18px;
+            }
+            .booking-native-input-hint {
+                inset-inline: 14px 40px;
             }
             .field label {
                 font-size: 18px;
@@ -1837,6 +1893,7 @@ html, body {
             .booking-form {
                 min-height: 420px;
                 padding: 20px max(14px, env(safe-area-inset-right)) 20px max(14px, env(safe-area-inset-left));
+                overflow-x: visible;
             }
             .field input, .field select, .field textarea {
                 font-size: 16px;
@@ -1845,8 +1902,14 @@ html, body {
             }
             .booking-date-input,
             .booking-time-input {
-                padding-inline-end: 36px !important;
+                min-height: 52px !important;
+                padding-block: 14px !important;
+                padding-inline: 12px 36px !important;
                 font-size: 16px !important;
+            }
+            .booking-native-input-hint {
+                inset-inline: 12px 36px;
+                font-size: 16px;
             }
             .counter-control {
                 min-height: 52px;
