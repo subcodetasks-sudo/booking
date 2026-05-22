@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8">
@@ -82,7 +82,7 @@
         >
             <div id="step-1">
                 <div class="form-section-title centered" id="step-1-title"> اختيار الموعد</div>
-                <div class="grid grid-3">
+                <div class="grid grid-2">
                     <div class="field">
                         <label for="reservation_date" id="label-reservation-date">تاريخ الحجز</label>
                         <div class="booking-native-input-wrap" data-native-input="reservation_date">
@@ -102,16 +102,9 @@
                         </div>
                         <input id="guest_count" type="hidden" value="1" min="1" max="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}" required>
                     </div>
-                    <div class="field">
-                        <label for="reservation_time" id="label-reservation-time">الوقت المبدئي</label>
-                        <div class="booking-native-input-wrap" data-native-input="reservation_time">
-                            <input id="reservation_time" class="booking-time-input" type="time" required>
-                            <span class="booking-native-input-hint" id="hint-reservation-time" aria-hidden="true">اختر الوقت</span>
-                        </div>
-                    </div>
                 </div>
-                <div class="actions actions-centered"><button id="search-slots" class="btn" type="button">الخطوة التالية</button></div>
                 <div id="availability" class="availability hidden">
+                    <p id="slot-selection-error" class="slot-selection-error hidden" role="alert"></p>
                     <div class="availability-picker">
                         <p class="availability-date-line" id="availability-date-line" aria-live="polite"></p>
                         <div class="slot-acc">
@@ -135,8 +128,8 @@
                             </div>
                         </div>
                     </div>
-                    <div class="actions actions-centered"><button id="to-step-2" class="btn" type="button">تأكيد الموعد والمتابعة</button></div>
                 </div>
+                <div class="actions actions-centered"><button id="search-slots" class="btn" type="button">الخطوة التالية</button></div>
             </div>
 
             <div id="step-2" class="hidden">

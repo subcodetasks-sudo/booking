@@ -7,6 +7,7 @@ use App\Models\ScheduleDayClosure;
 use App\Models\SiteSetting;
 use App\Models\TimeSlot;
 use App\Support\BookingConfig;
+use App\Support\SlotCapacity;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -24,7 +25,6 @@ final class WeekCalendarBuilder
 
         [$bookingStartMin, $bookingEndMin] = $this->bookingWindowMinutes();
         $bookingIsActive = (bool) SiteSetting::getValue('booking_is_active', true);
-        $capacity = BookingConfig::BOOKINGS_PER_HOURLY_SLOT;
         $maxPerDay = BookingConfig::maxReservationsPerDay();
 
         $closureDates = ScheduleDayClosure::query()
@@ -39,9 +39,14 @@ final class WeekCalendarBuilder
 
         /** @var Collection<string, Collection<int, Reservation>> $reservationsByDateHour */
         $reservationsByDateHour = $reservations->groupBy(function (Reservation $r): string {
-            $hour = (int) substr((string) $r->reservation_time, 0, 2);
+            $dateStr = Carbon::parse($r->reservation_date)->toDateString();
+            $time = substr((string) $r->reservation_time, 0, 5);
 
-            return Carbon::parse($r->reservation_date)->toDateString().'_'.$hour;
+            if (! preg_match('/^\d{2}:00$/', $time)) {
+                return $dateStr.'_orphan_'.$r->id;
+            }
+
+            return $dateStr.'_'.(int) substr($time, 0, 2);
         });
 
         $reservationsTotalByDay = $reservations
@@ -54,10 +59,13 @@ final class WeekCalendarBuilder
             ->get()
             ->groupBy(fn (TimeSlot $s) => Carbon::parse($s->slot_date)->toDateString());
 
-        $hours = range(
-            (int) floor($bookingStartMin / 60),
-            max((int) floor(($bookingEndMin - 1) / 60), (int) floor($bookingStartMin / 60)),
-        );
+        $hours = array_values(array_filter(
+            range(
+                (int) floor($bookingStartMin / 60),
+                max((int) floor(($bookingEndMin - 1) / 60), (int) floor($bookingStartMin / 60)),
+            ),
+            fn (int $hour): bool => $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin),
+        ));
 
         $days = [];
         for ($i = 0; $i < 7; $i++) {
@@ -73,6 +81,8 @@ final class WeekCalendarBuilder
             foreach ($hours as $hour) {
                 $key = $dateStr.'_'.$hour;
                 $hourReservations = $reservationsByDateHour->get($key);
+                $hourCapacity = SlotCapacity::forHour($dateStr, $hour, $daySlots);
+
                 $cells[] = $this->makeCell(
                     $dateStr,
                     $hour,
@@ -83,7 +93,7 @@ final class WeekCalendarBuilder
                     $hourReservations instanceof Collection ? $hourReservations : collect(),
                     $daySlots,
                     $dayCapacityFull,
-                    $capacity,
+                    $hourCapacity,
                 );
             }
 
@@ -227,7 +237,15 @@ final class WeekCalendarBuilder
             ]);
         }
 
-        if ($dayCapacityFull && $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin)) {
+        if (! $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin)) {
+            return array_merge($base, [
+                'status' => 'outside',
+                'detail' => null,
+                'closure_slot_id' => null,
+            ]);
+        }
+
+        if ($dayCapacityFull) {
             return array_merge($base, [
                 'status' => 'unavailable',
                 'detail' => __('panel.dashboard.calendar.day_capacity_full_hint'),
@@ -259,14 +277,6 @@ final class WeekCalendarBuilder
                 'status' => 'unavailable',
                 'detail' => null,
                 'closure_slot_id' => $manualClosedSlot->id,
-            ]);
-        }
-
-        if (! $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin)) {
-            return array_merge($base, [
-                'status' => 'outside',
-                'detail' => null,
-                'closure_slot_id' => null,
             ]);
         }
 
@@ -304,12 +314,14 @@ final class WeekCalendarBuilder
         return null;
     }
 
+    /**
+     * Matches {@see ReservationController::buildHourlySlots()} — slot start must be within [start, end).
+     */
     private function hourInBookingWindow(int $hour, int $bookingStartMin, int $bookingEndMin): bool
     {
         $slotStart = $hour * 60;
-        $slotEnd = ($hour + 1) * 60;
 
-        return $slotStart >= $bookingStartMin && $slotEnd <= $bookingEndMin;
+        return $slotStart >= $bookingStartMin && $slotStart < $bookingEndMin;
     }
 
     private function timeToMinutes(string $time): int

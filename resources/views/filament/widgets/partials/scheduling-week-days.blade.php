@@ -111,6 +111,12 @@
                         <div class="scheduling-card__body">
                             <x-filament::icon :icon="$icon" class="scheduling-card__status-icon" />
                             <div class="scheduling-card__info">
+                                <span class="scheduling-card__tables-usage">
+                                    {{ __('panel.dashboard.calendar.tables_usage', [
+                                        'booked' => $slot['reserved_count'],
+                                        'total' => $slot['capacity'],
+                                    ]) }}
+                                </span>
                                 @if ($status === 'booked' && $slot['detail'])
                                     <span class="scheduling-card__detail">{{ $slot['detail'] }}</span>
                                 @elseif ($status === 'available')
@@ -124,6 +130,26 @@
                                 @endif
                             </div>
                         </div>
+
+                        @if ($status !== 'unavailable')
+                            <div class="scheduling-card__capacity">
+                                <label
+                                    class="scheduling-card__capacity-label"
+                                    for="tables-{{ $slot['id'] }}"
+                                >
+                                    {{ __('panel.dashboard.calendar.tables_count') }}
+                                </label>
+                                <input
+                                    id="tables-{{ $slot['id'] }}"
+                                    class="scheduling-card__capacity-input"
+                                    type="number"
+                                    min="1"
+                                    max="99"
+                                    value="{{ max(1, (int) $slot['capacity']) }}"
+                                    wire:change="updateHourCapacity('{{ $slot['date'] }}', {{ $slot['hour'] }}, $event.target.value)"
+                                />
+                            </div>
+                        @endif
 
                         <div class="scheduling-card__actions">
                             @if ($status === 'available')

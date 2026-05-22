@@ -9,10 +9,16 @@ use Illuminate\Database\Eloquent\Builder;
 final class BookingConfig
 {
     /**
-     * Exactly one hourly reservation slot (one booking per clock hour).
-     * Total volume per calendar day is limited by {@see maxReservationsPerDay()}.
+     * Default tables per hourly slot when no per-hour override exists in {@see TimeSlot}.
+     *
+     * @deprecated Use {@see SlotCapacity::defaultPerHour()} or {@see SlotCapacity::forHour()}
      */
     public const BOOKINGS_PER_HOURLY_SLOT = 1;
+
+    public static function tablesPerHour(): int
+    {
+        return SlotCapacity::defaultPerHour();
+    }
 
     public static function maxReservationsPerDay(): ?int
     {

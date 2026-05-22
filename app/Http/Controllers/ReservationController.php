@@ -11,6 +11,7 @@ use App\Models\ScheduleDayClosure;
 use App\Models\SiteSetting;
 use App\Models\TimeSlot;
 use App\Support\BookingConfig;
+use App\Support\SlotCapacity;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -106,8 +107,11 @@ class ReservationController extends Controller
         }
 
         $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
-        $capacity = BookingConfig::BOOKINGS_PER_HOURLY_SLOT;
         $maxPerDay = BookingConfig::maxReservationsPerDay();
+
+        $configuredSlots = TimeSlot::query()
+            ->whereDate('slot_date', $date->toDateString())
+            ->get();
 
         $dayTotal = Reservation::query()
             ->whereDate('reservation_date', $date->toDateString())
@@ -129,7 +133,11 @@ class ReservationController extends Controller
 
         $counts = ['available' => 0, 'booked' => 0, 'blocked' => 0, 'total' => 0];
 
-        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots, $capacity, $dayCapacityFull, &$counts): array {
+        $dateStr = $date->toDateString();
+
+        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots, $configuredSlots, $dayCapacityFull, $dateStr, &$counts): array {
+            $hour = SlotCapacity::hourFromTimeLabel($start);
+            $capacity = SlotCapacity::forHour($dateStr, $hour, $configuredSlots);
             $reserved = (int) ($reservedByTime[$start.':00'] ?? $reservedByTime[$start] ?? 0);
             $isClosedManually = $this->slotIsManuallyClosed($manualClosedSlots, $start);
 
@@ -182,7 +190,7 @@ class ReservationController extends Controller
             'day_capacity_full' => $dayCapacityFull,
             'day_reservations_total' => $dayTotal,
             'day_max_reservations' => $maxPerDay,
-            'bookings_per_hour_slot' => $capacity,
+            'bookings_per_hour_slot' => SlotCapacity::defaultPerHour(),
             'booking_start' => $startAt,
             'booking_end' => $endAt,
             'counts' => $counts,
@@ -259,7 +267,6 @@ class ReservationController extends Controller
             [$startAt, $endAt] = $this->getBookingWindow();
             $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
 
-            $capacity = BookingConfig::BOOKINGS_PER_HOURLY_SLOT;
             $maxPerDay = BookingConfig::maxReservationsPerDay();
 
             $requestedTime = substr((string) $data['reservation_time'], 0, 5);
@@ -279,6 +286,19 @@ class ReservationController extends Controller
                         'reservation_date' => __('panel.booking.day_capacity_reached'),
                     ]);
                 }
+            }
+
+            $configuredSlots = TimeSlot::query()
+                ->whereDate('slot_date', $date->toDateString())
+                ->get();
+
+            $slotHour = SlotCapacity::hourFromTimeLabel($requestedTime);
+            $capacity = SlotCapacity::forHour($date->toDateString(), $slotHour, $configuredSlots);
+
+            if ($capacity < 1) {
+                throw ValidationException::withMessages([
+                    'reservation_time' => 'الوقت المختار غير متاح. اختر وقتًا آخر.',
+                ]);
             }
 
             $slotReservedCount = Reservation::query()

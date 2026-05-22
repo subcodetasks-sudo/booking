@@ -112,14 +112,32 @@ function selectAvailableSlot(slot) {
     });
     btn.classList.add('active');
     selectedSlot = slot;
-
-    const timeInput = document.getElementById('reservation_time');
-    if (timeInput && normalizeSlotTime(timeInput.value) !== slot) {
-        timeInput.value = slot;
-        syncNativeInputHints();
-    }
+    clearSlotSelectionError();
 
     return true;
+}
+
+function setSlotSelectionError(message) {
+    const el = document.getElementById('slot-selection-error');
+    if (!el) {
+        return;
+    }
+    el.textContent = message || '';
+    el.classList.toggle('hidden', !message);
+}
+
+function clearSlotSelectionError() {
+    setSlotSelectionError('');
+}
+
+async function refreshStep1Availability(dateStr, preserveSelection = false) {
+    if (!availability || !dateStr || isPastReservationDate(dateStr)) {
+        return;
+    }
+
+    availability.classList.remove('hidden');
+    availabilityCache.delete(dateStr);
+    await renderSlotGrid(dateStr, preserveSelection);
 }
 
 function getOperatingSlotTimes() {
@@ -168,13 +186,12 @@ async function getAvailabilityForDate(dateStr) {
 
 const SLOT_BOOKING_META_ICON = '<svg class="slot-info-ico" width="13" height="13" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="1.35"/><path d="M12 16v-5M12 8h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 
-async function renderSlotGrid(dateStr, preserveSelection = false, showPreferredTimeError = false) {
+async function renderSlotGrid(dateStr, preserveSelection = false) {
     const gridAvail = document.getElementById('slot-grid-available');
     const gridBook = document.getElementById('slot-grid-booked');
     const emptyAvail = document.getElementById('slot-available-empty');
     const emptyBook = document.getElementById('slot-booked-empty');
     const dateLine = document.getElementById('availability-date-line');
-    const timeInput = document.getElementById('reservation_time');
 
     if (!gridAvail || !gridBook) {
         return;
@@ -231,14 +248,6 @@ async function renderSlotGrid(dateStr, preserveSelection = false, showPreferredT
     const unavailableSet = new Set(booked);
     if (preserveSelection && prev && !unavailableSet.has(prev)) {
         selectAvailableSlot(prev);
-    } else {
-        const preferredTime = normalizeSlotTime(timeInput?.value || '');
-        if (preferredTime && available.includes(preferredTime)) {
-            selectAvailableSlot(preferredTime);
-            clearFieldError(timeInput);
-        } else if (showPreferredTimeError && preferredTime && unavailableSet.has(preferredTime)) {
-            setFieldError(timeInput, i18n[currentLang].valPreferredSlotBooked);
-        }
     }
 }
 
@@ -363,7 +372,6 @@ function persistBookingDraft() {
         const draft = {
             step: getCurrentStep(),
             reservation_date: document.getElementById('reservation_date')?.value || '',
-            reservation_time_input: document.getElementById('reservation_time')?.value || '',
             selected_slot: selectedSlot || '',
             guest_count: document.getElementById('guest_count')?.value || '1',
             customer_name: document.getElementById('customer_name')?.value || '',
@@ -402,7 +410,6 @@ function restoreBookingDraft() {
         };
 
         setValue('reservation_date', draft.reservation_date || '');
-        setValue('reservation_time', draft.reservation_time_input || '');
         syncNativeInputHints();
         setValue('customer_name', draft.customer_name || '');
         setValue('customer_phone', draft.customer_phone || '');
@@ -467,8 +474,6 @@ const i18n = {
         labelReservationDate: 'تاريخ الحجز',
         hintReservationDate: 'اختر التاريخ',
         labelGuestCount: 'عدد الأفراد',
-        labelReservationTime: 'الوقت المبدئي',
-        hintReservationTime: 'اختر الوقت',
         labelCustomerName: 'الاسم الكامل',
         labelCustomerPhone: 'رقم الجوال',
         labelCustomerEmail: 'البريد الإلكتروني',
@@ -498,7 +503,7 @@ const i18n = {
         feature4Title: 'WhatsApp',
         feature4Sub: 'إرسال تفاصيل الحجز للمطعم',
         qrKicker: 'امسح الكود',
-        qrTitle: 'أطلع علي الأضناف والوجبات الان',
+        qrTitle: 'أطلع علي الأصناف والوجبات الان',
         qrSub: 'شارك صفحة المنيو مع ضيوفك أو افتحها مباشرة من الجوال.',
         stepperAria: 'خطوات الحجز',
         socialFabAria: 'روابط التواصل الاجتماعي',
@@ -534,14 +539,11 @@ const i18n = {
         confirmSlotContinue: 'تأكيد الموعد والمتابعة',
         backToStep2: 'رجوع',
         valEnterReservationDate: 'أدخل تاريخ الحجز.',
-        valEnterPreferredTime: 'أدخل الوقت المبدئي.',
         valEnterGuestCount: 'أدخل عدد الأفراد.',
         valDateFuture: 'تاريخ الحجز يجب أن يكون اليوم أو تاريخًا مستقبليًا.',
         valPickSlotFromList: 'اختر وقتًا متاحًا أولاً من قائمة المواعيد.',
         valPickSlotFirst: 'اختر وقتًا متاحًا أولاً.',
-        valPreferredSlotBooked: 'الوقت المختار محجوز. اختر وقتًا متاحًا آخر.',
         valPleaseEnterDate: 'يرجى إدخال التاريخ.',
-        valPleaseEnterTime: 'يرجى إدخال الوقت.',
         valPleaseEnterGuests: 'يرجى إدخال عدد الأفراد.',
         valPleaseEnterName: 'يرجى إدخال الاسم.',
         valPleaseEnterPhone: 'يرجى إدخال رقم الجوال.',
@@ -575,8 +577,6 @@ const i18n = {
         labelReservationDate: 'Reservation date',
         hintReservationDate: 'Select date',
         labelGuestCount: 'Party size',
-        labelReservationTime: 'Preferred time',
-        hintReservationTime: 'Select time',
         labelCustomerName: 'Full name',
         labelCustomerPhone: 'Mobile number',
         labelCustomerEmail: 'Email address',
@@ -643,14 +643,11 @@ const i18n = {
         confirmSlotContinue: 'Confirm time & continue',
         backToStep2: 'Back',
         valEnterReservationDate: 'Enter your reservation date.',
-        valEnterPreferredTime: 'Enter your preferred time.',
         valEnterGuestCount: 'Enter the number of guests.',
         valDateFuture: 'Reservation date must be today or in the future.',
         valPickSlotFromList: 'Choose an available time from the list first.',
         valPickSlotFirst: 'Choose an available time first.',
-        valPreferredSlotBooked: 'The selected time is booked. Choose another available time.',
         valPleaseEnterDate: 'Please enter the date.',
-        valPleaseEnterTime: 'Please enter the time.',
         valPleaseEnterGuests: 'Please enter the party size.',
         valPleaseEnterName: 'Please enter your name.',
         valPleaseEnterPhone: 'Please enter your mobile number.',
@@ -1047,12 +1044,8 @@ function applyLanguage(lang) {
     if (labelDate) labelDate.textContent = L.labelReservationDate;
     const labelGuests = document.getElementById('label-guest-count');
     if (labelGuests) labelGuests.textContent = L.labelGuestCount;
-    const labelTime = document.getElementById('label-reservation-time');
-    if (labelTime) labelTime.textContent = L.labelReservationTime;
     const hintDate = document.getElementById('hint-reservation-date');
     if (hintDate) hintDate.textContent = L.hintReservationDate;
-    const hintTime = document.getElementById('hint-reservation-time');
-    if (hintTime) hintTime.textContent = L.hintReservationTime;
     syncNativeInputHints();
     const labelName = document.getElementById('label-customer-name');
     if (labelName) labelName.textContent = L.labelCustomerName;
@@ -1149,10 +1142,6 @@ function applyLanguage(lang) {
     document.getElementById('slot-acc-available-label')?.replaceChildren(document.createTextNode(L.slotAccordionAvailable));
     document.getElementById('slot-acc-booked-label')?.replaceChildren(document.createTextNode(L.slotAccordionBooked));
 
-    const toStep2 = document.getElementById('to-step-2');
-    if (toStep2) {
-        toStep2.textContent = L.confirmSlotContinue;
-    }
     const backTo2Label = document.getElementById('back-to-2-label');
     if (backTo2Label) {
         backTo2Label.textContent = L.backToStep2;
@@ -1371,14 +1360,11 @@ function canMoveToStep(targetStep) {
     // To reach step 2/3, step 1 must be completed first.
     const dateInput = document.getElementById('reservation_date');
     const guestInput = document.getElementById('guest_count');
-    const timeInput = document.getElementById('reservation_time');
     const d = dateInput?.value;
     const g = guestInput?.value;
-    const t = timeInput?.value;
-    if (!d || !g || !t) {
+    if (!d || !g) {
         const V = i18n[currentLang];
         setFieldError(dateInput, !d ? V.valEnterReservationDate : '');
-        setFieldError(timeInput, !t ? V.valEnterPreferredTime : '');
         setFieldError(guestInput, !g ? V.valEnterGuestCount : '');
         return false;
     }
@@ -1387,14 +1373,13 @@ function canMoveToStep(targetStep) {
         return false;
     }
     clearFieldError(dateInput);
-    clearFieldError(timeInput);
     clearFieldError(guestInput);
 
     if (!selectedSlot) {
-        setFieldError(timeInput, i18n[currentLang].valPickSlotFromList);
+        setSlotSelectionError(i18n[currentLang].valPickSlotFromList);
         return false;
     }
-    clearFieldError(timeInput);
+    clearSlotSelectionError();
 
     // To reach step 3 directly from stepper, step 2 must be visited/completed.
     if (targetStep >= 3 && step2.classList.contains('hidden') && step3.classList.contains('hidden')) {
@@ -1418,18 +1403,15 @@ function goToStep(stepNumber) {
     persistBookingDraft();
 }
 
-document.getElementById('search-slots').addEventListener('click', () => {
+document.getElementById('search-slots').addEventListener('click', async () => {
     const dateInput = document.getElementById('reservation_date');
     const guestInput = document.getElementById('guest_count');
-    const timeInput = document.getElementById('reservation_time');
     const d = dateInput.value;
     const g = guestInput.value;
-    const t = timeInput.value;
 
     const V = i18n[currentLang];
-    if (!d || !g || !t) {
+    if (!d || !g) {
         setFieldError(dateInput, !d ? V.valPleaseEnterDate : '');
-        setFieldError(timeInput, !t ? V.valPleaseEnterTime : '');
         setFieldError(guestInput, !g ? V.valPleaseEnterGuests : '');
         return;
     }
@@ -1438,18 +1420,21 @@ document.getElementById('search-slots').addEventListener('click', () => {
         return;
     }
     clearFieldError(dateInput);
-    clearFieldError(timeInput);
     clearFieldError(guestInput);
 
-    // Refresh from DB when user re-checks availability for this date.
-    availabilityCache.delete(d);
-    availability.classList.remove('hidden');
-    renderSlotGrid(d, false, true);
+    await refreshStep1Availability(d, true);
 
-    // Auto-scroll to available slots section
-    requestAnimationFrame(() => {
-        availability.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
+    if (!selectedSlot) {
+        setSlotSelectionError(V.valPickSlotFirst);
+        requestAnimationFrame(() => {
+            availability?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        persistBookingDraft();
+        return;
+    }
+
+    clearSlotSelectionError();
+    goToStep(2);
     persistBookingDraft();
 });
 
@@ -1459,53 +1444,37 @@ document.getElementById('slot-grid-available')?.addEventListener('click', (e) =>
         return;
     }
     selectAvailableSlot(btn.dataset.slot || '');
-    clearFieldError(document.getElementById('reservation_time'));
     persistBookingDraft();
 });
 
-['reservation_date', 'reservation_time'].forEach((id) => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.addEventListener('input', syncNativeInputHints);
-    el.addEventListener('change', syncNativeInputHints);
-});
-
-document.getElementById('reservation_date')?.addEventListener('change', () => {
+document.getElementById('reservation_date')?.addEventListener('input', syncNativeInputHints);
+document.getElementById('reservation_date')?.addEventListener('change', async () => {
     const dateInput = document.getElementById('reservation_date');
-    if (isPastReservationDate(dateInput?.value || '')) {
+    const dateValue = dateInput?.value || '';
+    syncNativeInputHints();
+
+    if (isPastReservationDate(dateValue)) {
         setFieldError(dateInput, i18n[currentLang].valDateFuture);
-    } else {
-        clearFieldError(dateInput);
-    }
-    if (!availability || availability.classList.contains('hidden')) {
+        availability?.classList.add('hidden');
+        selectedSlot = '';
+        clearSlotSelectionError();
         persistBookingDraft();
         return;
     }
-    renderSlotGrid(document.getElementById('reservation_date').value, false);
-    persistBookingDraft();
-});
 
-document.getElementById('reservation_time')?.addEventListener('change', () => {
-    const date = document.getElementById('reservation_date')?.value || '';
-    selectedSlot = '';
-
-    if (availability && !availability.classList.contains('hidden') && date) {
-        renderSlotGrid(date, false, true);
-    } else {
-        clearFieldError(document.getElementById('reservation_time'));
-    }
-
-    persistBookingDraft();
-});
-
-document.getElementById('to-step-2').addEventListener('click', () => {
-    const timeInput = document.getElementById('reservation_time');
-    if (!selectedSlot) {
-        setFieldError(timeInput, i18n[currentLang].valPickSlotFirst);
+    clearFieldError(dateInput);
+    if (!dateValue) {
+        availability?.classList.add('hidden');
+        selectedSlot = '';
+        clearSlotSelectionError();
+        persistBookingDraft();
         return;
     }
-    clearFieldError(timeInput);
-    goToStep(2);
+
+    selectedSlot = '';
+    clearSlotSelectionError();
+    await refreshStep1Availability(dateValue, false);
+    persistBookingDraft();
 });
 
 document.getElementById('back-to-1').addEventListener('click', () => {

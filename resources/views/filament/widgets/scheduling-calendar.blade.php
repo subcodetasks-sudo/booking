@@ -717,6 +717,49 @@
 
             .scheduling-card__detail--muted { color: rgb(var(--gray-500)); font-weight: 400; }
 
+            .scheduling-card__tables-usage {
+                display: block;
+                font-size: 0.8125rem;
+                font-weight: 600;
+                color: rgb(var(--gray-700));
+                margin-bottom: 0.25rem;
+            }
+
+            .dark .scheduling-card__tables-usage { color: rgb(var(--gray-300)); }
+
+            .scheduling-card__capacity {
+                display: flex;
+                flex-wrap: wrap;
+                align-items: center;
+                gap: 0.5rem;
+            }
+
+            .scheduling-card__capacity-label {
+                font-size: 0.75rem;
+                font-weight: 600;
+                color: rgb(var(--gray-600));
+            }
+
+            .dark .scheduling-card__capacity-label { color: rgb(var(--gray-400)); }
+
+            .scheduling-card__capacity-input {
+                width: 4.25rem;
+                padding: 0.35rem 0.5rem;
+                border: 1px solid rgb(var(--gray-300));
+                border-radius: 0.5rem;
+                font-size: 0.875rem;
+                font-weight: 600;
+                font-variant-numeric: tabular-nums;
+                background: white;
+                color: rgb(var(--gray-900));
+            }
+
+            .dark .scheduling-card__capacity-input {
+                border-color: rgb(var(--gray-600));
+                background: rgb(var(--gray-900));
+                color: rgb(var(--gray-100));
+            }
+
             .scheduling-card__actions {
                 margin-top: auto;
                 padding-top: 0.25rem;

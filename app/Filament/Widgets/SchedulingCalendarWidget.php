@@ -4,6 +4,7 @@ namespace App\Filament\Widgets;
 
 use App\Filament\Pages\SiteSettings;
 use App\Filament\Resources\Reservations\ReservationResource;
+use App\Models\Reservation;
 use App\Models\ScheduleDayClosure;
 use App\Models\TimeSlot;
 use App\Services\WeekCalendarBuilder;
@@ -255,9 +256,74 @@ class SchedulingCalendarWidget extends Widget
             ->send();
     }
 
+    public function updateHourCapacity(string $date, int $hour, $tables): void
+    {
+        $d = Carbon::parse($date)->toDateString();
+        $hour = max(0, min(23, (int) $hour));
+        $tables = max(0, min(99, (int) $tables));
+
+        if ($tables < 1) {
+            $this->markHourUnavailable($d, $hour);
+
+            return;
+        }
+
+        $reservedCount = Reservation::query()
+            ->whereDate('reservation_date', $d)
+            ->where('status', '!=', 'cancelled')
+            ->whereTime('reservation_time', '=', sprintf('%02d:00:00', $hour))
+            ->count();
+
+        if ($tables < $reservedCount) {
+            Notification::make()
+                ->title(__('panel.dashboard.calendar.capacity_below_booked', [
+                    'booked' => $reservedCount,
+                ]))
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        TimeSlot::query()->updateOrCreate(
+            [
+                'slot_date' => $d,
+                'start_time' => sprintf('%02d:00:00', $hour),
+            ],
+            [
+                'end_time' => sprintf('%02d:00:00', $hour + 1),
+                'capacity' => $tables,
+                'reserved_guests' => 0,
+                'held_guests' => 0,
+                'is_closed_manually' => false,
+            ]
+        );
+
+        Notification::make()
+            ->title(__('panel.dashboard.calendar.hour_capacity_saved', ['count' => $tables]))
+            ->success()
+            ->send();
+    }
+
     public function markHourUnavailable(string $date, int $hour): void
     {
         $d = Carbon::parse($date)->toDateString();
+        $hour = max(0, min(23, (int) $hour));
+
+        $reservedCount = Reservation::query()
+            ->whereDate('reservation_date', $d)
+            ->where('status', '!=', 'cancelled')
+            ->whereTime('reservation_time', '=', sprintf('%02d:00:00', $hour))
+            ->count();
+
+        if ($reservedCount > 0) {
+            Notification::make()
+                ->title(__('panel.dashboard.calendar.block_denied_booked'))
+                ->danger()
+                ->send();
+
+            return;
+        }
 
         TimeSlot::query()->updateOrCreate(
             [
