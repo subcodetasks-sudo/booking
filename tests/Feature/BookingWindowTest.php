@@ -26,6 +26,21 @@ class BookingWindowTest extends TestCase
         $this->assertSame(['04:00', '12:00'], BookingWindow::resolve());
     }
 
+    public function test_booking_window_endpoint_returns_saved_settings(): void
+    {
+        SiteSetting::setValue('booking_start_time', '04:00');
+        SiteSetting::setValue('booking_end_time', '12:00');
+        SiteSetting::setValue('booking_is_active', '1');
+
+        $this->getJson('/booking-window')
+            ->assertOk()
+            ->assertJson([
+                'booking_start' => '04:00',
+                'booking_end' => '12:00',
+                'booking_active' => true,
+            ]);
+    }
+
     public function test_availability_returns_slots_inside_booking_window(): void
     {
         SiteSetting::setValue('booking_start_time', '04:00');

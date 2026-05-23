@@ -60,6 +60,17 @@ class ReservationController extends Controller
         ]);
     }
 
+    public function bookingWindow()
+    {
+        [$startAt, $endAt] = BookingWindow::resolve();
+
+        return response()->json([
+            'booking_start' => $startAt,
+            'booking_end' => $endAt,
+            'booking_active' => $this->bookingIsActive(),
+        ])->header('Cache-Control', 'no-store, no-cache, must-revalidate');
+    }
+
     public function dietaryOptions()
     {
         $options = DietaryOption::query()

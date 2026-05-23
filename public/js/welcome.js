@@ -124,6 +124,41 @@ function clearSlotSelectionError() {
     setSlotSelectionError('');
 }
 
+function syncPanelBookingWindowFromDom() {
+    const hint = document.getElementById('booking-hours-hint');
+    const startFromHint = normalizeSlotTime(hint?.dataset?.bookingStart);
+    const endFromHint = normalizeSlotTime(hint?.dataset?.bookingEnd);
+    const startFromForm = normalizeSlotTime(bookingForm?.dataset?.bookingStart);
+    const endFromForm = normalizeSlotTime(bookingForm?.dataset?.bookingEnd);
+
+    if (startFromHint) {
+        panelBookingWindow.start = startFromHint;
+    } else if (startFromForm) {
+        panelBookingWindow.start = startFromForm;
+    }
+    if (endFromHint) {
+        panelBookingWindow.end = endFromHint;
+    } else if (endFromForm) {
+        panelBookingWindow.end = endFromForm;
+    }
+    if (bookingForm) {
+        panelBookingWindow.active = bookingForm.dataset.bookingActive !== '0';
+    }
+}
+
+function applyBookingWindowToDom() {
+    if (bookingForm) {
+        bookingForm.dataset.bookingStart = panelBookingWindow.start;
+        bookingForm.dataset.bookingEnd = panelBookingWindow.end;
+        bookingForm.dataset.bookingActive = panelBookingWindow.active ? '1' : '0';
+    }
+    const hint = document.getElementById('booking-hours-hint');
+    if (hint) {
+        hint.dataset.bookingStart = panelBookingWindow.start;
+        hint.dataset.bookingEnd = panelBookingWindow.end;
+    }
+}
+
 function formatBookingHoursLine(start, end) {
     const L = i18n[currentLang];
 
@@ -133,10 +168,11 @@ function formatBookingHoursLine(start, end) {
 }
 
 function updateBookingHoursLine(start, end) {
+    syncPanelBookingWindowFromDom();
     const el = document.getElementById('availability-hours-line');
     const hint = document.getElementById('booking-hours-hint');
-    const lineStart = start || panelBookingWindow.start;
-    const lineEnd = end || panelBookingWindow.end;
+    const lineStart = normalizeSlotTime(start) || panelBookingWindow.start;
+    const lineEnd = normalizeSlotTime(end) || panelBookingWindow.end;
     const text = (!lineStart || !lineEnd) ? '' : formatBookingHoursLine(lineStart, lineEnd);
 
     if (hint) {
@@ -202,6 +238,25 @@ function applyBookingWindowFromPayload(payload) {
     }
     if (typeof payload.booking_active === 'boolean') {
         panelBookingWindow.active = payload.booking_active;
+    }
+    applyBookingWindowToDom();
+}
+
+async function loadBookingWindowFromServer() {
+    try {
+        const res = await fetch('/booking-window', {
+            headers: { Accept: 'application/json' },
+            cache: 'no-store',
+        });
+        if (!res.ok) {
+            return;
+        }
+        const payload = await res.json();
+        applyBookingWindowFromPayload(payload);
+        updateBookingHoursLine();
+        syncGlobalBookingState();
+    } catch {
+        /* keep values rendered from the server */
     }
 }
 
@@ -1837,10 +1892,12 @@ langButtons.forEach((button) => {
 });
 
 /** Apply saved UI language before async loaders finish so headings/labels match pills immediately. */
+syncPanelBookingWindowFromDom();
 applyLanguage(currentLang);
 updateBookingHoursLine();
 syncGlobalBookingState();
 syncNativeInputHints();
+loadBookingWindowFromServer();
 
 function setupSocialFab() {
     const root = document.getElementById('social-fab');
@@ -1911,6 +1968,7 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') {
         return;
     }
+    loadBookingWindowFromServer();
     availabilityCache.clear();
     const dateStr = document.getElementById('reservation_date')?.value?.trim();
     if (dateStr && availability && !availability.classList.contains('hidden') && !isPastReservationDate(dateStr)) {

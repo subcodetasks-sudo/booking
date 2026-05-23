@@ -3,8 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Models\SiteSetting;
+use App\Rules\ValidBookingTime;
 use App\Support\BookingWindow;
-use Closure;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -87,13 +87,13 @@ class SiteSettings extends Page
                             ->required()
                             ->placeholder('04:00')
                             ->helperText(__('panel.pages.booking_time_format_help'))
-                            ->rule(self::bookingTimeValidationRule()),
+                            ->rule(new ValidBookingTime()),
                         TextInput::make('booking_end_time')
                             ->label(__('panel.pages.booking_end_time'))
                             ->required()
                             ->placeholder('12:00')
                             ->helperText(__('panel.pages.booking_time_format_help'))
-                            ->rule(self::bookingTimeValidationRule()),
+                            ->rule(new ValidBookingTime()),
                         Toggle::make('booking_is_active')
                             ->label(__('panel.pages.booking_is_active'))
                             ->default(true)
@@ -210,12 +210,4 @@ class SiteSettings extends Page
         return preg_replace('/\D+/', '', $phone) ?: '';
     }
 
-    private static function bookingTimeValidationRule(): Closure
-    {
-        return function (string $attribute, mixed $value, Closure $fail): void {
-            if (BookingWindow::normalize($value) === null) {
-                $fail(__('panel.pages.booking_time_invalid'));
-            }
-        };
-    }
 }

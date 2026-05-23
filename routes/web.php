@@ -15,6 +15,8 @@ Route::get('/reservation-addons', [ReservationController::class, 'reservationAdd
     ->name('reservations.addons');
 Route::get('/dietary-options', [ReservationController::class, 'dietaryOptions'])
     ->name('reservations.dietary-options');
+Route::get('/booking-window', [ReservationController::class, 'bookingWindow'])
+    ->name('reservations.booking-window');
 Route::get('/availability', [ReservationController::class, 'availability'])
     ->name('reservations.availability');
 Route::get('/availability/closed-dates', [ReservationController::class, 'closedDates'])

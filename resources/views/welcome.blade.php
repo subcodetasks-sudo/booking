@@ -110,7 +110,13 @@
                         <input id="guest_count" type="hidden" value="1" min="1" max="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}" required>
                     </div>
                 </div>
-                <p id="booking-hours-hint" class="booking-hours-hint" aria-live="polite"></p>
+                <p
+                    id="booking-hours-hint"
+                    class="booking-hours-hint"
+                    aria-live="polite"
+                    data-booking-start="{{ $bookingStartTime }}"
+                    data-booking-end="{{ $bookingEndTime }}"
+                >@if($bookingIsActive)ساعات الحجز: من {{ $bookingStartTime }} إلى {{ $bookingEndTime }}@endif</p>
                 <div id="availability" class="availability hidden">
                     <p id="availability-hours-line" class="availability-hours-line hidden" aria-live="polite"></p>
                     <p id="availability-notice" class="availability-notice hidden" role="alert"></p>
