@@ -86,13 +86,13 @@ class SiteSettings extends Page
                             ->label(__('panel.pages.booking_start_time'))
                             ->required()
                             ->placeholder('04:00')
-                            ->helperText(__('panel.pages.booking_time_format_help'))
+                            ->helperText(__('panel.pages.booking_time_format_help').' '.__('panel.pages.booking_time_all_days_help'))
                             ->rule(new ValidBookingTime()),
                         TextInput::make('booking_end_time')
                             ->label(__('panel.pages.booking_end_time'))
                             ->required()
                             ->placeholder('12:00')
-                            ->helperText(__('panel.pages.booking_time_format_help'))
+                            ->helperText(__('panel.pages.booking_time_format_help').' '.__('panel.pages.booking_time_all_days_help'))
                             ->rule(new ValidBookingTime()),
                         Toggle::make('booking_is_active')
                             ->label(__('panel.pages.booking_is_active'))
@@ -163,10 +163,18 @@ class SiteSettings extends Page
         SiteSetting::setValue('home_h1_text', $state['home_h1_text'] ?? null);
         SiteSetting::setValue('home_h1_text_en', $state['home_h1_text_en'] ?? null);
         SiteSetting::setValue('home_h1_color', $state['home_h1_color'] ?? null);
-        [$bookingStart, $bookingEnd] = BookingWindow::resolve(
-            $state['booking_start_time'] ?? null,
-            $state['booking_end_time'] ?? null,
-        );
+        $bookingStart = BookingWindow::normalize($state['booking_start_time'] ?? null);
+        $bookingEnd = BookingWindow::normalize($state['booking_end_time'] ?? null);
+
+        if ($bookingStart === null || $bookingEnd === null || $bookingStart >= $bookingEnd) {
+            Notification::make()
+                ->title(__('panel.pages.booking_time_range_invalid'))
+                ->danger()
+                ->send();
+
+            return;
+        }
+
         SiteSetting::setValue('booking_start_time', $bookingStart);
         SiteSetting::setValue('booking_end_time', $bookingEnd);
         SiteSetting::setValue('booking_is_active', ! empty($state['booking_is_active']) ? '1' : '0');
