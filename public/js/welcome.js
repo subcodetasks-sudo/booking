@@ -17,6 +17,11 @@ const MAX_GUEST_COUNT = Number.isFinite(configuredMaxGuests) && configuredMaxGue
     ? configuredMaxGuests
     : 20;
 const MIN_BOOKING_DATE = bookingForm?.dataset?.minDate || '';
+const panelBookingWindow = {
+    start: String(bookingForm?.dataset?.bookingStart || '12:00').trim(),
+    end: String(bookingForm?.dataset?.bookingEnd || '23:00').trim(),
+    active: bookingForm?.dataset?.bookingActive !== '0',
+};
 
 /** يُستخدم فقط عند فشل طلب الشبكة؛ القائمة الفعلية من `/reservation-addons` (منتجات نشطة من جدول products). */
 const ADDON_FALLBACK_OPTIONS = [
@@ -71,19 +76,8 @@ const activatePill = (n) => {
 
 const formatDate = (d) => (d ? d.split('-').reverse().join('/') : '-');
 
-/** كل ساعات العمل اليومية (خطوات ٣٠ دقيقة). عدِّل هذه الثوابت حسب المطعم. */
-const SLOT_DAY_START_MIN = 12 * 60;
-const SLOT_DAY_END_MIN = 23 * 60 + 30;
-const SLOT_STEP_MIN = 30;
-
 function padTime(n) {
     return String(n).padStart(2, '0');
-}
-
-function minutesToSlot(totalMin) {
-    const h = Math.floor(totalMin / 60);
-    const m = totalMin % 60;
-    return `${padTime(h)}:${padTime(m)}`;
 }
 
 function normalizeSlotTime(value) {
@@ -130,6 +124,87 @@ function clearSlotSelectionError() {
     setSlotSelectionError('');
 }
 
+function formatBookingHoursLine(start, end) {
+    const L = i18n[currentLang];
+
+    return L.bookingHoursLine
+        .replace(':start', start || panelBookingWindow.start)
+        .replace(':end', end || panelBookingWindow.end);
+}
+
+function updateBookingHoursLine(start, end) {
+    const el = document.getElementById('availability-hours-line');
+    const hint = document.getElementById('booking-hours-hint');
+    const lineStart = start || panelBookingWindow.start;
+    const lineEnd = end || panelBookingWindow.end;
+    const text = (!lineStart || !lineEnd) ? '' : formatBookingHoursLine(lineStart, lineEnd);
+
+    if (hint) {
+        hint.textContent = text;
+    }
+
+    if (!el) {
+        return;
+    }
+
+    if (!text) {
+        el.textContent = '';
+        el.classList.add('hidden');
+        return;
+    }
+
+    el.textContent = text;
+    el.classList.remove('hidden');
+}
+
+function setAvailabilityNotice(message) {
+    const el = document.getElementById('availability-notice');
+    if (!el) {
+        return;
+    }
+
+    if (!message) {
+        el.textContent = '';
+        el.classList.add('hidden');
+        return;
+    }
+
+    el.textContent = message;
+    el.classList.remove('hidden');
+}
+
+function syncGlobalBookingState() {
+    const searchBtn = document.getElementById('search-slots');
+    if (!panelBookingWindow.active) {
+        setAvailabilityNotice(i18n[currentLang].bookingInactive);
+        searchBtn?.setAttribute('disabled', 'disabled');
+        return;
+    }
+
+    searchBtn?.removeAttribute('disabled');
+    if (availability?.classList.contains('hidden')) {
+        setAvailabilityNotice('');
+    }
+}
+
+function applyBookingWindowFromPayload(payload) {
+    if (!payload || typeof payload !== 'object') {
+        return;
+    }
+
+    const start = normalizeSlotTime(payload.booking_start);
+    const end = normalizeSlotTime(payload.booking_end);
+    if (start) {
+        panelBookingWindow.start = start;
+    }
+    if (end) {
+        panelBookingWindow.end = end;
+    }
+    if (typeof payload.booking_active === 'boolean') {
+        panelBookingWindow.active = payload.booking_active;
+    }
+}
+
 async function refreshStep1Availability(dateStr, preserveSelection = false) {
     if (!availability || !dateStr || isPastReservationDate(dateStr)) {
         return;
@@ -140,15 +215,6 @@ async function refreshStep1Availability(dateStr, preserveSelection = false) {
     await renderSlotGrid(dateStr, preserveSelection);
 }
 
-function getOperatingSlotTimes() {
-    const list = [];
-    for (let t = SLOT_DAY_START_MIN; t <= SLOT_DAY_END_MIN; t += SLOT_STEP_MIN) {
-        list.push(minutesToSlot(t));
-    }
-    return list;
-}
-
-/** مواعيد محجوزة للعرض فقط؛ اربط لاحقًا بـ API يعيد المواعيد المغلقة فعليًا. */
 function formatDateForSlotHeader(iso) {
     if (!iso) {
         return '';
@@ -166,21 +232,31 @@ function formatDateForSlotHeader(iso) {
     }
 }
 
-async function getAvailabilityForDate(dateStr) {
-    if (!dateStr) return [];
-    if (availabilityCache.has(dateStr)) return availabilityCache.get(dateStr);
+async function fetchAvailabilityPayload(dateStr) {
+    if (!dateStr) {
+        return { slots: [] };
+    }
+    if (availabilityCache.has(dateStr)) {
+        return availabilityCache.get(dateStr);
+    }
 
     try {
         const res = await fetch(`/availability?date=${encodeURIComponent(dateStr)}`, {
             headers: { Accept: 'application/json' },
         });
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+            throw new Error(`HTTP ${res.status}`);
+        }
         const payload = await res.json();
-        const slots = Array.isArray(payload.slots) ? payload.slots : [];
-        availabilityCache.set(dateStr, slots);
-        return slots;
+        const normalized = {
+            ...payload,
+            slots: Array.isArray(payload.slots) ? payload.slots : [],
+        };
+        availabilityCache.set(dateStr, normalized);
+        applyBookingWindowFromPayload(normalized);
+        return normalized;
     } catch {
-        return [];
+        return { slots: [] };
     }
 }
 
@@ -192,6 +268,7 @@ async function renderSlotGrid(dateStr, preserveSelection = false) {
     const emptyAvail = document.getElementById('slot-available-empty');
     const emptyBook = document.getElementById('slot-booked-empty');
     const dateLine = document.getElementById('availability-date-line');
+    const picker = document.querySelector('.availability-picker');
 
     if (!gridAvail || !gridBook) {
         return;
@@ -202,7 +279,36 @@ async function renderSlotGrid(dateStr, preserveSelection = false) {
     }
 
     const prev = preserveSelection ? selectedSlot : '';
-    const slots = await getAvailabilityForDate(dateStr);
+    const payload = await fetchAvailabilityPayload(dateStr);
+    applyBookingWindowFromPayload(payload);
+    updateBookingHoursLine(payload.booking_start, payload.booking_end);
+    syncGlobalBookingState();
+
+    const blockedDay = !!payload.day_closed || payload.booking_active === false;
+
+    if (payload.day_closed) {
+        setAvailabilityNotice(i18n[currentLang].dayClosed);
+    } else if (payload.booking_active === false) {
+        setAvailabilityNotice(i18n[currentLang].bookingInactive);
+    } else if (payload.day_capacity_full) {
+        setAvailabilityNotice(i18n[currentLang].dayCapacityFull);
+    } else {
+        setAvailabilityNotice('');
+    }
+
+    if (blockedDay) {
+        picker?.classList.add('hidden');
+        gridAvail.innerHTML = '';
+        gridBook.innerHTML = '';
+        emptyAvail?.classList.add('hidden');
+        emptyBook?.classList.add('hidden');
+        selectedSlot = '';
+        return;
+    }
+
+    picker?.classList.remove('hidden');
+
+    const slots = payload.slots || [];
     const word = i18n[currentLang].slotBooked;
     const meta = i18n[currentLang].slotBookingKind;
     const spotsLbl = i18n[currentLang].slotSpotsLeft;
@@ -534,6 +640,10 @@ const i18n = {
         slotBookingKind: 'حجز طاولة',
         slotSpotsLeft: 'متبقي :n طاولة',
         slotBooked: 'موجود',
+        bookingHoursLine: 'ساعات الحجز: من :start إلى :end',
+        bookingInactive: 'الحجز عبر الموقع متوقف حاليًا. تواصل مع المطعم مباشرة.',
+        dayClosed: 'هذا اليوم مغلق للحجز.',
+        dayCapacityFull: 'اكتمل عدد الحجوزات المسموح به لهذا اليوم.',
         slotNoneAvailable: 'لا توجد مواعيد متاحة في هذا اليوم بعد.',
         slotNoneBookedDisplay: 'لا توجد مواعيد محجوزة لهذا اليوم.',
         confirmSlotContinue: 'تأكيد الموعد والمتابعة',
@@ -638,6 +748,10 @@ const i18n = {
         slotBookingKind: 'Table booking',
         slotSpotsLeft: ':n spots left',
         slotBooked: 'Booked',
+        bookingHoursLine: 'Booking hours: :start – :end',
+        bookingInactive: 'Online booking is currently closed. Please contact the restaurant.',
+        dayClosed: 'This day is closed for booking.',
+        dayCapacityFull: 'Maximum reservations for this day have been reached.',
         slotNoneAvailable: 'No open times left for this day.',
         slotNoneBookedDisplay: 'No booked slots to show for this day.',
         confirmSlotContinue: 'Confirm time & continue',
@@ -1151,6 +1265,8 @@ function applyLanguage(lang) {
         skipStep2.textContent = L.skipStep;
     }
     renderReservationAddons();
+    updateBookingHoursLine();
+    syncGlobalBookingState();
     if (availability && !availability.classList.contains('hidden')) {
         renderSlotGrid(document.getElementById('reservation_date')?.value || '', true);
     }
@@ -1722,6 +1838,8 @@ langButtons.forEach((button) => {
 
 /** Apply saved UI language before async loaders finish so headings/labels match pills immediately. */
 applyLanguage(currentLang);
+updateBookingHoursLine();
+syncGlobalBookingState();
 syncNativeInputHints();
 
 function setupSocialFab() {
@@ -1777,6 +1895,8 @@ Promise.all([loadDietaryOptions(), loadReservationAddons()]).finally(() => {
     setupDietModal();
     setupSlotAccordions();
     applyLanguage(currentLang);
+    updateBookingHoursLine();
+    syncGlobalBookingState();
     setupNotesModal();
     setupTextZoom();
     setupSocialFab();

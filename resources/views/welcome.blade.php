@@ -72,11 +72,25 @@
         </div>
         
 
+        @php
+            $bookingStartTime = (string) \App\Models\SiteSetting::getValue('booking_start_time', '12:00');
+            $bookingEndTime = (string) \App\Models\SiteSetting::getValue('booking_end_time', '23:00');
+            $bookingIsActive = (bool) \App\Models\SiteSetting::getValue('booking_is_active', true);
+            if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $bookingStartTime)) {
+                $bookingStartTime = '12:00';
+            }
+            if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $bookingEndTime)) {
+                $bookingEndTime = '23:00';
+            }
+        @endphp
         <form
             id="booking-flow"
             class="booking-form"
             data-max-guests="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}"
             data-min-date="{{ now()->toDateString() }}"
+            data-booking-start="{{ $bookingStartTime }}"
+            data-booking-end="{{ $bookingEndTime }}"
+            data-booking-active="{{ $bookingIsActive ? '1' : '0' }}"
             data-booking-whatsapp-phone="{{ \App\Models\SiteSetting::bookingWhatsAppPhoneDigits() }}"
             data-booking-whatsapp-url="{{ \App\Models\SiteSetting::bookingWhatsAppUrl() }}"
         >
@@ -103,7 +117,10 @@
                         <input id="guest_count" type="hidden" value="1" min="1" max="{{ (int) \App\Models\SiteSetting::getValue('max_guest_count', 20) }}" required>
                     </div>
                 </div>
+                <p id="booking-hours-hint" class="booking-hours-hint" aria-live="polite"></p>
                 <div id="availability" class="availability hidden">
+                    <p id="availability-hours-line" class="availability-hours-line hidden" aria-live="polite"></p>
+                    <p id="availability-notice" class="availability-notice hidden" role="alert"></p>
                     <p id="slot-selection-error" class="slot-selection-error hidden" role="alert"></p>
                     <div class="availability-picker">
                         <p class="availability-date-line" id="availability-date-line" aria-live="polite"></p>

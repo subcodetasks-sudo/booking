@@ -7,6 +7,7 @@ use App\Filament\Resources\Reservations\ReservationResource;
 use App\Models\Reservation;
 use App\Models\ScheduleDayClosure;
 use App\Models\TimeSlot;
+use App\Support\SlotCapacity;
 use App\Services\WeekCalendarBuilder;
 use Carbon\Carbon;
 use Filament\Notifications\Notification;
@@ -268,11 +269,7 @@ class SchedulingCalendarWidget extends Widget
             return;
         }
 
-        $reservedCount = Reservation::query()
-            ->whereDate('reservation_date', $d)
-            ->where('status', '!=', 'cancelled')
-            ->whereTime('reservation_time', '=', sprintf('%02d:00:00', $hour))
-            ->count();
+        $reservedCount = SlotCapacity::reservedCountForHour($d, $hour);
 
         if ($tables < $reservedCount) {
             Notification::make()
@@ -284,6 +281,8 @@ class SchedulingCalendarWidget extends Widget
 
             return;
         }
+
+        SlotCapacity::setHourTemplateCapacity($hour, $tables);
 
         TimeSlot::query()->updateOrCreate(
             [
@@ -310,11 +309,7 @@ class SchedulingCalendarWidget extends Widget
         $d = Carbon::parse($date)->toDateString();
         $hour = max(0, min(23, (int) $hour));
 
-        $reservedCount = Reservation::query()
-            ->whereDate('reservation_date', $d)
-            ->where('status', '!=', 'cancelled')
-            ->whereTime('reservation_time', '=', sprintf('%02d:00:00', $hour))
-            ->count();
+        $reservedCount = SlotCapacity::reservedCountForHour($d, $hour);
 
         if ($reservedCount > 0) {
             Notification::make()

@@ -119,13 +119,6 @@ class ReservationController extends Controller
             ->count();
         $dayCapacityFull = $maxPerDay !== null && $dayTotal >= $maxPerDay;
 
-        $reservedByTime = Reservation::query()
-            ->whereDate('reservation_date', $date->toDateString())
-            ->where('status', '!=', 'cancelled')
-            ->selectRaw('reservation_time, COUNT(*) as reservations_count')
-            ->groupBy('reservation_time')
-            ->pluck('reservations_count', 'reservation_time');
-
         $manualClosedSlots = TimeSlot::query()
             ->whereDate('slot_date', $date->toDateString())
             ->where('is_closed_manually', true)
@@ -135,10 +128,10 @@ class ReservationController extends Controller
 
         $dateStr = $date->toDateString();
 
-        $slots = collect($timeKeys)->map(function (string $start) use ($reservedByTime, $manualClosedSlots, $configuredSlots, $dayCapacityFull, $dateStr, &$counts): array {
+        $slots = collect($timeKeys)->map(function (string $start) use ($manualClosedSlots, $configuredSlots, $dayCapacityFull, $dateStr, &$counts): array {
             $hour = SlotCapacity::hourFromTimeLabel($start);
             $capacity = SlotCapacity::forHour($dateStr, $hour, $configuredSlots);
-            $reserved = (int) ($reservedByTime[$start.':00'] ?? $reservedByTime[$start] ?? 0);
+            $reserved = SlotCapacity::reservedCountForHour($dateStr, $hour);
             $isClosedManually = $this->slotIsManuallyClosed($manualClosedSlots, $start);
 
             if ($dayCapacityFull) {
@@ -301,11 +294,10 @@ class ReservationController extends Controller
                 ]);
             }
 
-            $slotReservedCount = Reservation::query()
-                ->whereDate('reservation_date', $date->toDateString())
-                ->where('status', '!=', 'cancelled')
-                ->whereTime('reservation_time', '=', $requestedTime.':00')
-                ->count();
+            $slotReservedCount = SlotCapacity::reservedCountForHour(
+                $date->toDateString(),
+                SlotCapacity::hourFromTimeLabel($requestedTime),
+            );
 
             if ($slotReservedCount >= $capacity) {
                 throw ValidationException::withMessages([

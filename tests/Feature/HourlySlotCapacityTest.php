@@ -76,4 +76,67 @@ class HourlySlotCapacityTest extends TestCase
         $this->assertSame(2, $slot['capacity']);
         $this->assertSame(2, $slot['reserved']);
     }
+
+    public function test_same_hour_is_available_next_day_after_filling_capacity(): void
+    {
+        SiteSetting::setValue('booking_tables_per_hour', '2');
+
+        $dayOne = now()->toDateString();
+        $dayTwo = now()->addDay()->toDateString();
+        $time = '18:00';
+
+        foreach (['A', 'B'] as $index => $name) {
+            Reservation::query()->create([
+                'reservation_code' => 'DAY1-'.$index,
+                'reservation_date' => $dayOne,
+                'reservation_time' => $time,
+                'guest_count' => 2,
+                'status' => 'pending',
+                'order_status' => 'no_order',
+                'customer_name' => $name,
+                'customer_phone' => '050000000'.($index + 1),
+            ]);
+        }
+
+        $dayOneSlot = collect($this->getJson('/availability?date='.$dayOne)->json('slots'))
+            ->firstWhere('time', $time);
+        $this->assertSame('booked', $dayOneSlot['status']);
+
+        $dayTwoSlot = collect($this->getJson('/availability?date='.$dayTwo)->json('slots'))
+            ->firstWhere('time', $time);
+        $this->assertNotNull($dayTwoSlot);
+        $this->assertSame('available', $dayTwoSlot['status']);
+        $this->assertSame(2, $dayTwoSlot['capacity']);
+        $this->assertSame(0, $dayTwoSlot['reserved']);
+        $this->assertSame(2, $dayTwoSlot['spots_remaining']);
+    }
+
+    public function test_hour_template_capacity_applies_on_following_days(): void
+    {
+        SiteSetting::setValue('booking_tables_per_hour', '1');
+        \App\Support\SlotCapacity::setHourTemplateCapacity(18, 4);
+
+        $dayOne = now()->toDateString();
+        $dayTwo = now()->addDay()->toDateString();
+
+        for ($i = 0; $i < 4; $i++) {
+            Reservation::query()->create([
+                'reservation_code' => 'TMP-'.$i,
+                'reservation_date' => $dayOne,
+                'reservation_time' => '18:00',
+                'guest_count' => 2,
+                'status' => 'pending',
+                'order_status' => 'no_order',
+                'customer_name' => 'Guest '.$i,
+                'customer_phone' => '05000000'.str_pad((string) $i, 2, '0', STR_PAD_LEFT),
+            ]);
+        }
+
+        $dayTwoSlot = collect($this->getJson('/availability?date='.$dayTwo)->json('slots'))
+            ->firstWhere('time', '18:00');
+
+        $this->assertSame('available', $dayTwoSlot['status']);
+        $this->assertSame(4, $dayTwoSlot['capacity']);
+        $this->assertSame(4, $dayTwoSlot['spots_remaining']);
+    }
 }
