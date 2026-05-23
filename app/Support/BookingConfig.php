@@ -39,30 +39,13 @@ final class BookingConfig
      */
     public static function hourOptionsForFilter(): array
     {
-        $startAt = (string) SiteSetting::getValue('booking_start_time', '12:00');
-        $endAt = (string) SiteSetting::getValue('booking_end_time', '23:00');
-
-        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $startAt)) {
-            $startAt = '12:00';
-        }
-        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $endAt)) {
-            $endAt = '23:00';
-        }
-
-        if ($startAt >= $endAt) {
-            $startAt = '12:00';
-            $endAt = '23:00';
-        }
-
-        $day = Carbon::today()->toDateString();
-        $cursor = Carbon::parse($day.' '.$startAt);
-        $close = Carbon::parse($day.' '.$endAt);
-
+        [$startAt, $endAt] = BookingWindow::resolve();
+        $labels = BookingWindow::hourlySlotLabels(Carbon::today()->toDateString(), $startAt, $endAt);
         $opts = [];
-        while ($cursor->lt($close)) {
-            $h = (int) $cursor->format('H');
-            $opts[$h] = $cursor->format('H:i');
-            $cursor->addHour();
+
+        foreach ($labels as $label) {
+            $h = (int) substr($label, 0, 2);
+            $opts[$h] = $label;
         }
 
         return $opts;

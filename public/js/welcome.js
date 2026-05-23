@@ -1906,3 +1906,14 @@ Promise.all([loadDietaryOptions(), loadReservationAddons()]).finally(() => {
 window.addEventListener('beforeunload', () => {
     persistBookingDraft();
 });
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible') {
+        return;
+    }
+    availabilityCache.clear();
+    const dateStr = document.getElementById('reservation_date')?.value?.trim();
+    if (dateStr && availability && !availability.classList.contains('hidden') && !isPastReservationDate(dateStr)) {
+        renderSlotGrid(dateStr, true);
+    }
+});

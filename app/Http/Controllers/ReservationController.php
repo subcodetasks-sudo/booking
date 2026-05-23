@@ -11,6 +11,7 @@ use App\Models\ScheduleDayClosure;
 use App\Models\SiteSetting;
 use App\Models\TimeSlot;
 use App\Support\BookingConfig;
+use App\Support\BookingWindow;
 use App\Support\SlotCapacity;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -85,7 +86,7 @@ class ReservationController extends Controller
         ]);
 
         $date = Carbon::parse($data['date']);
-        [$startAt, $endAt] = $this->getBookingWindow();
+        [$startAt, $endAt] = BookingWindow::resolve();
         $bookingActive = $this->bookingIsActive();
         $dayClosed = $this->dateIsClosed($date);
 
@@ -106,7 +107,7 @@ class ReservationController extends Controller
             ]);
         }
 
-        $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
+        $timeKeys = BookingWindow::hourlySlotLabels($date->toDateString(), $startAt, $endAt);
         $maxPerDay = BookingConfig::maxReservationsPerDay();
 
         $configuredSlots = TimeSlot::query()
@@ -257,8 +258,8 @@ class ReservationController extends Controller
                 ]);
             }
 
-            [$startAt, $endAt] = $this->getBookingWindow();
-            $timeKeys = $this->buildHourlySlots($date, $startAt, $endAt);
+            [$startAt, $endAt] = BookingWindow::resolve();
+            $timeKeys = BookingWindow::hourlySlotLabels($date->toDateString(), $startAt, $endAt);
 
             $maxPerDay = BookingConfig::maxReservationsPerDay();
 
@@ -457,40 +458,6 @@ class ReservationController extends Controller
         } while (Reservation::query()->where('reservation_code', $code)->exists());
 
         return $code;
-    }
-
-    private function getBookingWindow(): array
-    {
-        $startAt = (string) SiteSetting::getValue('booking_start_time', '12:00');
-        $endAt = (string) SiteSetting::getValue('booking_end_time', '23:00');
-
-        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $startAt)) {
-            $startAt = '12:00';
-        }
-        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $endAt)) {
-            $endAt = '23:00';
-        }
-
-        if ($startAt >= $endAt) {
-            $startAt = '12:00';
-            $endAt = '23:00';
-        }
-
-        return [$startAt, $endAt];
-    }
-
-    private function buildHourlySlots(Carbon $date, string $startAt, string $endAt): array
-    {
-        $cursor = Carbon::parse($date->toDateString().' '.$startAt);
-        $close = Carbon::parse($date->toDateString().' '.$endAt);
-        $slots = [];
-
-        while ($cursor->lt($close)) {
-            $slots[] = $cursor->format('H:i');
-            $cursor->addHour();
-        }
-
-        return $slots;
     }
 
     private function bookingIsActive(): bool

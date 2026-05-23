@@ -26,6 +26,8 @@ return [
         'booking_hours_description' => 'Daily booking window used by website availability.',
         'booking_start_time' => 'From hour',
         'booking_end_time' => 'To hour',
+        'booking_time_format_help' => 'Example: 04:00 or 4:00 (for 4 AM–12 PM use 04:00 and 12:00). End time must be after start.',
+        'booking_time_invalid' => 'Invalid time. Use HH:MM (e.g. 04:00) or hour only (e.g. 4).',
         'booking_is_active' => 'Enable booking during these hours',
         'max_guest_count' => 'Maximum guests',
         'booking_whatsapp_phone' => 'Booking WhatsApp phone',

@@ -3,6 +3,8 @@
 namespace App\Filament\Pages;
 
 use App\Models\SiteSetting;
+use App\Support\BookingWindow;
+use Closure;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -43,8 +45,10 @@ class SiteSettings extends Page
             'home_h1_text' => SiteSetting::getValue('home_h1_text', 'احجز طاولتك بسهولة'),
             'home_h1_text_en' => SiteSetting::getValue('home_h1_text_en', 'Book your table easily'),
             'home_h1_color' => SiteSetting::getValue('home_h1_color', '#5b4a36'),
-            'booking_start_time' => SiteSetting::getValue('booking_start_time', '12:00'),
-            'booking_end_time' => SiteSetting::getValue('booking_end_time', '23:00'),
+            'booking_start_time' => BookingWindow::normalize(SiteSetting::getValue('booking_start_time', BookingWindow::DEFAULT_START))
+                ?? BookingWindow::DEFAULT_START,
+            'booking_end_time' => BookingWindow::normalize(SiteSetting::getValue('booking_end_time', BookingWindow::DEFAULT_END))
+                ?? BookingWindow::DEFAULT_END,
             'booking_is_active' => (bool) SiteSetting::getValue('booking_is_active', true),
             'max_guest_count' => (int) SiteSetting::getValue('max_guest_count', 20),
             'booking_tables_per_hour' => (int) SiteSetting::getValue('booking_tables_per_hour', 1),
@@ -81,13 +85,15 @@ class SiteSettings extends Page
                         TextInput::make('booking_start_time')
                             ->label(__('panel.pages.booking_start_time'))
                             ->required()
-                            ->placeholder('12:00')
-                            ->regex('/^([01]\d|2[0-3]):([0-5]\d)$/'),
+                            ->placeholder('04:00')
+                            ->helperText(__('panel.pages.booking_time_format_help'))
+                            ->rule(self::bookingTimeValidationRule()),
                         TextInput::make('booking_end_time')
                             ->label(__('panel.pages.booking_end_time'))
                             ->required()
-                            ->placeholder('23:00')
-                            ->regex('/^([01]\d|2[0-3]):([0-5]\d)$/'),
+                            ->placeholder('12:00')
+                            ->helperText(__('panel.pages.booking_time_format_help'))
+                            ->rule(self::bookingTimeValidationRule()),
                         Toggle::make('booking_is_active')
                             ->label(__('panel.pages.booking_is_active'))
                             ->default(true)
@@ -157,8 +163,12 @@ class SiteSettings extends Page
         SiteSetting::setValue('home_h1_text', $state['home_h1_text'] ?? null);
         SiteSetting::setValue('home_h1_text_en', $state['home_h1_text_en'] ?? null);
         SiteSetting::setValue('home_h1_color', $state['home_h1_color'] ?? null);
-        SiteSetting::setValue('booking_start_time', $state['booking_start_time'] ?? '12:00');
-        SiteSetting::setValue('booking_end_time', $state['booking_end_time'] ?? '23:00');
+        [$bookingStart, $bookingEnd] = BookingWindow::resolve(
+            $state['booking_start_time'] ?? null,
+            $state['booking_end_time'] ?? null,
+        );
+        SiteSetting::setValue('booking_start_time', $bookingStart);
+        SiteSetting::setValue('booking_end_time', $bookingEnd);
         SiteSetting::setValue('booking_is_active', ! empty($state['booking_is_active']) ? '1' : '0');
         SiteSetting::setValue('max_guest_count', (string) max(1, (int) ($state['max_guest_count'] ?? 20)));
         SiteSetting::setValue(
@@ -198,5 +208,14 @@ class SiteSettings extends Page
         $phone = str_replace($from, $to, trim($phone));
 
         return preg_replace('/\D+/', '', $phone) ?: '';
+    }
+
+    private static function bookingTimeValidationRule(): Closure
+    {
+        return function (string $attribute, mixed $value, Closure $fail): void {
+            if (BookingWindow::normalize($value) === null) {
+                $fail(__('panel.pages.booking_time_invalid'));
+            }
+        };
     }
 }

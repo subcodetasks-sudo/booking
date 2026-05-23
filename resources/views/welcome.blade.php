@@ -73,15 +73,8 @@
         
 
         @php
-            $bookingStartTime = (string) \App\Models\SiteSetting::getValue('booking_start_time', '12:00');
-            $bookingEndTime = (string) \App\Models\SiteSetting::getValue('booking_end_time', '23:00');
+            [$bookingStartTime, $bookingEndTime] = \App\Support\BookingWindow::resolve();
             $bookingIsActive = (bool) \App\Models\SiteSetting::getValue('booking_is_active', true);
-            if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $bookingStartTime)) {
-                $bookingStartTime = '12:00';
-            }
-            if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $bookingEndTime)) {
-                $bookingEndTime = '23:00';
-            }
         @endphp
         <form
             id="booking-flow"

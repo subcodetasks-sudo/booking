@@ -165,20 +165,7 @@ final class WeekCalendarBuilder
      */
     private function bookingWindowMinutes(): array
     {
-        $startAt = (string) SiteSetting::getValue('booking_start_time', '12:00');
-        $endAt = (string) SiteSetting::getValue('booking_end_time', '23:00');
-
-        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $startAt)) {
-            $startAt = '12:00';
-        }
-        if (! preg_match('/^([01]\d|2[0-3]):([0-5]\d)$/', $endAt)) {
-            $endAt = '23:00';
-        }
-
-        if ($startAt >= $endAt) {
-            $startAt = '12:00';
-            $endAt = '23:00';
-        }
+        [$startAt, $endAt] = \App\Support\BookingWindow::resolve();
 
         return [$this->timeToMinutes($startAt), $this->timeToMinutes($endAt)];
     }
