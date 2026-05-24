@@ -166,7 +166,7 @@ class SiteSettings extends Page
         $bookingStart = BookingWindow::normalize($state['booking_start_time'] ?? null);
         $bookingEnd = BookingWindow::normalize($state['booking_end_time'] ?? null);
 
-        if ($bookingStart === null || $bookingEnd === null || $bookingStart >= $bookingEnd) {
+        if ($bookingStart === null || $bookingEnd === null || $bookingStart === $bookingEnd) {
             Notification::make()
                 ->title(__('panel.pages.booking_time_range_invalid'))
                 ->danger()

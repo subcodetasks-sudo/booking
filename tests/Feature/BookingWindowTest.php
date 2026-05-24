@@ -27,6 +27,46 @@ class BookingWindowTest extends TestCase
         $this->assertSame(['04:00', '12:00'], BookingWindow::resolve());
     }
 
+    public function test_resolve_allows_overnight_window(): void
+    {
+        SiteSetting::setValue('booking_start_time', '16:00');
+        SiteSetting::setValue('booking_end_time', '01:00');
+
+        $this->assertSame(['16:00', '01:00'], BookingWindow::resolve());
+        $this->assertTrue(BookingWindow::crossesMidnight());
+    }
+
+    public function test_overnight_window_generates_slots_through_midnight(): void
+    {
+        SiteSetting::setValue('booking_start_time', '16:00');
+        SiteSetting::setValue('booking_end_time', '01:00');
+
+        $date = now()->addDay()->toDateString();
+
+        $response = $this->getJson('/availability?date='.$date);
+        $response->assertOk();
+
+        $times = collect($response->json('slots'))->pluck('time')->all();
+
+        $this->assertSame(
+            ['16:00', '17:00', '18:00', '19:00', '20:00', '21:00', '22:00', '23:00', '00:00'],
+            $times,
+        );
+        $this->assertSame('16:00', $response->json('booking_start'));
+        $this->assertSame('01:00', $response->json('booking_end'));
+    }
+
+    public function test_overnight_hours_in_window_include_late_and_early_hours(): void
+    {
+        SiteSetting::setValue('booking_start_time', '16:00');
+        SiteSetting::setValue('booking_end_time', '01:00');
+
+        $this->assertSame(
+            [16, 17, 18, 19, 20, 21, 22, 23, 0],
+            BookingWindow::hoursInWindow(),
+        );
+    }
+
     public function test_booking_window_endpoint_returns_saved_settings(): void
     {
         SiteSetting::setValue('booking_start_time', '04:00');

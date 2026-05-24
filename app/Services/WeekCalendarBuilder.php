@@ -7,6 +7,7 @@ use App\Models\ScheduleDayClosure;
 use App\Models\SiteSetting;
 use App\Models\TimeSlot;
 use App\Support\BookingConfig;
+use App\Support\BookingWindow;
 use App\Support\SlotCapacity;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
@@ -23,7 +24,6 @@ final class WeekCalendarBuilder
         $weekStart = $weekStartSaturday->copy()->startOfDay();
         $weekEnd = $weekStart->copy()->addDays(6)->startOfDay();
 
-        [$bookingStartMin, $bookingEndMin] = $this->bookingWindowMinutes();
         $bookingIsActive = (bool) SiteSetting::getValue('booking_is_active', true);
         $maxPerDay = BookingConfig::maxReservationsPerDay();
 
@@ -59,13 +59,7 @@ final class WeekCalendarBuilder
             ->get()
             ->groupBy(fn (TimeSlot $s) => Carbon::parse($s->slot_date)->toDateString());
 
-        $hours = array_values(array_filter(
-            range(
-                (int) floor($bookingStartMin / 60),
-                max((int) floor(($bookingEndMin - 1) / 60), (int) floor($bookingStartMin / 60)),
-            ),
-            fn (int $hour): bool => $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin),
-        ));
+        $hours = BookingWindow::hoursInWindow();
 
         $days = [];
         for ($i = 0; $i < 7; $i++) {
@@ -87,8 +81,6 @@ final class WeekCalendarBuilder
                     $dateStr,
                     $hour,
                     $isHoliday,
-                    $bookingStartMin,
-                    $bookingEndMin,
                     $bookingIsActive,
                     $hourReservations instanceof Collection ? $hourReservations : collect(),
                     $daySlots,
@@ -160,16 +152,6 @@ final class WeekCalendarBuilder
         return $d->subDays($daysBack);
     }
 
-    /**
-     * @return array{0: int, 1: int}
-     */
-    private function bookingWindowMinutes(): array
-    {
-        [$startAt, $endAt] = \App\Support\BookingWindow::resolve();
-
-        return [$this->timeToMinutes($startAt), $this->timeToMinutes($endAt)];
-    }
-
     private function formatRangeLabel(Carbon $start, Carbon $end): string
     {
         $locale = app()->getLocale();
@@ -190,8 +172,6 @@ final class WeekCalendarBuilder
         string $dateStr,
         int $hour,
         bool $isHoliday,
-        int $bookingStartMin,
-        int $bookingEndMin,
         bool $bookingIsActive,
         Collection $hourReservations,
         Collection $daySlots,
@@ -224,7 +204,7 @@ final class WeekCalendarBuilder
             ]);
         }
 
-        if (! $this->hourInBookingWindow($hour, $bookingStartMin, $bookingEndMin)) {
+        if (! BookingWindow::hourInWindow($hour)) {
             return array_merge($base, [
                 'status' => 'outside',
                 'detail' => null,
@@ -299,16 +279,6 @@ final class WeekCalendarBuilder
         }
 
         return null;
-    }
-
-    /**
-     * Matches {@see ReservationController::buildHourlySlots()} — slot start must be within [start, end).
-     */
-    private function hourInBookingWindow(int $hour, int $bookingStartMin, int $bookingEndMin): bool
-    {
-        $slotStart = $hour * 60;
-
-        return $slotStart >= $bookingStartMin && $slotStart < $bookingEndMin;
     }
 
     private function timeToMinutes(string $time): int

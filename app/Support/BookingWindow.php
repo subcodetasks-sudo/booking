@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\SiteSetting;
+use Carbon\Carbon;
 
 final class BookingWindow
 {
@@ -49,6 +50,8 @@ final class BookingWindow
     /**
      * Resolved booking window from settings (or explicit overrides).
      *
+     * When end is earlier than start (e.g. 16:00 → 01:00), the window crosses midnight.
+     *
      * @return array{0: string, 1: string}
      */
     public static function resolve(?string $start = null, ?string $end = null): array
@@ -63,12 +66,49 @@ final class BookingWindow
             $endAt = self::DEFAULT_END;
         }
 
-        if ($startAt >= $endAt) {
+        if ($startAt === $endAt) {
             $startAt = self::DEFAULT_START;
             $endAt = self::DEFAULT_END;
         }
 
         return [$startAt, $endAt];
+    }
+
+    public static function crossesMidnight(?string $start = null, ?string $end = null): bool
+    {
+        [$startAt, $endAt] = self::resolve($start, $end);
+
+        return $startAt >= $endAt;
+    }
+
+    /**
+     * @return list<int> Hour numbers (0–23) inside the booking window.
+     */
+    public static function hoursInWindow(?string $start = null, ?string $end = null): array
+    {
+        [$startAt, $endAt] = self::resolve($start, $end);
+
+        $hours = array_values(array_filter(
+            range(0, 23),
+            fn (int $hour): bool => self::hourInWindow($hour, $startAt, $endAt),
+        ));
+
+        if ($startAt >= $endAt) {
+            $startHour = (int) substr($startAt, 0, 2);
+            usort(
+                $hours,
+                fn (int $a, int $b): int => self::overnightHourRank($a, $startHour) <=> self::overnightHourRank($b, $startHour),
+            );
+        }
+
+        return $hours;
+    }
+
+    public static function hourInWindow(int $hour, ?string $start = null, ?string $end = null): bool
+    {
+        [$startAt, $endAt] = self::resolve($start, $end);
+
+        return self::hourInResolvedWindow(max(0, min(23, $hour)), $startAt, $endAt);
     }
 
     /**
@@ -78,15 +118,43 @@ final class BookingWindow
     {
         [$startAt, $endAt] = self::resolve($start, $end);
 
-        $cursor = \Carbon\Carbon::parse($date.' '.$startAt);
-        $close = \Carbon\Carbon::parse($date.' '.$endAt);
-        $slots = [];
+        $cursor = Carbon::parse($date.' '.$startAt);
+        $close = Carbon::parse($date.' '.$endAt);
+        if ($startAt >= $endAt) {
+            $close->addDay();
+        }
 
+        $slots = [];
         while ($cursor->lt($close)) {
             $slots[] = $cursor->format('H:i');
             $cursor->addHour();
         }
 
         return $slots;
+    }
+
+    private static function hourInResolvedWindow(int $hour, string $startAt, string $endAt): bool
+    {
+        $slotStart = $hour * 60;
+        $startMin = self::timeToMinutes($startAt);
+        $endMin = self::timeToMinutes($endAt);
+
+        if ($startAt >= $endAt) {
+            return $slotStart >= $startMin || $slotStart < $endMin;
+        }
+
+        return $slotStart >= $startMin && $slotStart < $endMin;
+    }
+
+    private static function overnightHourRank(int $hour, int $startHour): int
+    {
+        return $hour >= $startHour ? $hour : $hour + 24;
+    }
+
+    private static function timeToMinutes(string $time): int
+    {
+        $parts = explode(':', substr($time, 0, 5));
+
+        return ((int) ($parts[0] ?? 0)) * 60 + ((int) ($parts[1] ?? 0));
     }
 }
