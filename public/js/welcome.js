@@ -366,7 +366,7 @@ async function renderSlotGrid(dateStr, preserveSelection = false) {
     const slots = payload.slots || [];
     const word = i18n[currentLang].slotBooked;
     const meta = i18n[currentLang].slotBookingKind;
-    const spotsLbl = i18n[currentLang].slotSpotsLeft;
+    // const spotsLbl = i18n[currentLang].slotSpotsLeft;
 
     const availableSlots = slots.filter((s) => !s.is_unavailable);
     const bookedSlots = slots.filter((s) => s.is_unavailable);
@@ -693,7 +693,7 @@ const i18n = {
         slotAccordionAvailable: 'المواعيد المتاحة',
         slotAccordionBooked: 'المواعيد المحجوزة',
         slotBookingKind: 'حجز طاولة',
-        slotSpotsLeft: 'متبقي :n طاولة',
+        // slotSpotsLeft: 'متبقي :n طاولة',
         slotBooked: 'موجود',
         bookingHoursLine: 'ساعات الحجز: من :start إلى :end',
         bookingInactive: 'الحجز عبر الموقع متوقف حاليًا. تواصل مع المطعم مباشرة.',
@@ -801,7 +801,7 @@ const i18n = {
         slotAccordionAvailable: 'Available times',
         slotAccordionBooked: 'Booked times',
         slotBookingKind: 'Table booking',
-        slotSpotsLeft: ':n spots left',
+        // slotSpotsLeft: ':n spots left',
         slotBooked: 'Booked',
         bookingHoursLine: 'Booking hours: :start – :end',
         bookingInactive: 'Online booking is currently closed. Please contact the restaurant.',
