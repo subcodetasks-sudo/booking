@@ -1701,15 +1701,6 @@ html, body {
             height: auto;
             border-radius: 12px;
         }
-        .slot-card-available .slot-card-spots {
-            display: block;
-            margin-top: 4px;
-            font-size: 11px;
-            font-weight: 700;
-            color: #d6ded4;
-            line-height: 1.25;
-        }
-
         /* قائمة التواصل العائمة */
         .social-fab {
             position: fixed;
