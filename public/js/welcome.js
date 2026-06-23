@@ -1,4 +1,6 @@
-﻿const step1 = document.getElementById('step-1');
+﻿const STEP2_MAINTENANCE_MODE = true;
+
+const step1 = document.getElementById('step-1');
 const step2 = document.getElementById('step-2');
 const step3 = document.getElementById('step-3');
 const availability = document.getElementById('availability');
@@ -692,6 +694,8 @@ const i18n = {
         slotNoneAvailable: 'لا توجد مواعيد متاحة في هذا اليوم بعد.',
         slotNoneBookedDisplay: 'لا توجد مواعيد محجوزة لهذا اليوم.',
         confirmSlotContinue: 'تأكيد الموعد والمتابعة',
+        serverMaintenanceMessage: 'السيرفر خارج العمل وجاري الإصلاح',
+        serverMaintenanceOk: 'حسنًا',
         backToStep2: 'رجوع',
         valEnterReservationDate: 'أدخل تاريخ الحجز.',
         valEnterGuestCount: 'أدخل عدد الأفراد.',
@@ -799,6 +803,8 @@ const i18n = {
         slotNoneAvailable: 'No open times left for this day.',
         slotNoneBookedDisplay: 'No booked slots to show for this day.',
         confirmSlotContinue: 'Confirm time & continue',
+        serverMaintenanceMessage: 'The server is offline and under maintenance.',
+        serverMaintenanceOk: 'OK',
         backToStep2: 'Back',
         valEnterReservationDate: 'Enter your reservation date.',
         valEnterGuestCount: 'Enter the number of guests.',
@@ -1287,6 +1293,8 @@ function applyLanguage(lang) {
     document.getElementById('diet-save')?.replaceChildren(document.createTextNode(L.dietSave));
     document.getElementById('notes-cancel')?.replaceChildren(document.createTextNode(L.dietCancel));
     document.getElementById('notes-save')?.replaceChildren(document.createTextNode(L.dietSave));
+    document.getElementById('maintenance-modal-message')?.replaceChildren(document.createTextNode(L.serverMaintenanceMessage));
+    document.getElementById('maintenance-modal-ok')?.replaceChildren(document.createTextNode(L.serverMaintenanceOk));
     document.getElementById('diet-tab-self')?.replaceChildren(document.createTextNode(L.dietTabYours));
     document.getElementById('diet-tab-guests')?.replaceChildren(document.createTextNode(L.dietTabGuests));
     updateDietChipLabels();
@@ -1550,7 +1558,43 @@ function canMoveToStep(targetStep) {
     return true;
 }
 
+function closeMaintenanceModal() {
+    const modal = document.getElementById('maintenance-modal');
+    if (!modal) {
+        return;
+    }
+    modal.classList.add('hidden');
+    modal.setAttribute('aria-hidden', 'true');
+}
+
+function showMaintenanceModal() {
+    const modal = document.getElementById('maintenance-modal');
+    const message = document.getElementById('maintenance-modal-message');
+    const okBtn = document.getElementById('maintenance-modal-ok');
+    const L = i18n[currentLang];
+    if (message) {
+        message.textContent = L.serverMaintenanceMessage;
+    }
+    if (okBtn) {
+        okBtn.textContent = L.serverMaintenanceOk;
+    }
+    if (!modal) {
+        return;
+    }
+    modal.classList.remove('hidden');
+    modal.removeAttribute('aria-hidden');
+    okBtn?.focus();
+}
+
 function goToStep(stepNumber) {
+    if (stepNumber === 2 && STEP2_MAINTENANCE_MODE) {
+        if (!canMoveToStep(2)) {
+            return;
+        }
+        showMaintenanceModal();
+        return;
+    }
+
     if (!canMoveToStep(stepNumber)) {
         return;
     }
@@ -1706,11 +1750,20 @@ document.getElementById('skip-step-2')?.addEventListener('click', () => {
 
 // Keep current step on refresh via URL (?step=1|2|3).
 const initialStep = readStepFromUrl();
-setStepUI(initialStep);
-syncStepInUrl(initialStep);
-if (initialStep === 3) {
-    renderFinalSummary();
+if (initialStep === 2 && STEP2_MAINTENANCE_MODE) {
+    setStepUI(1);
+    syncStepInUrl(1);
+    showMaintenanceModal();
+} else {
+    setStepUI(initialStep);
+    syncStepInUrl(initialStep);
+    if (initialStep === 3) {
+        renderFinalSummary();
+    }
 }
+
+document.getElementById('maintenance-modal-ok')?.addEventListener('click', closeMaintenanceModal);
+document.getElementById('maintenance-modal-backdrop')?.addEventListener('click', closeMaintenanceModal);
 
 document.getElementById('booking-flow').addEventListener('submit', (e) => {
     e.preventDefault();

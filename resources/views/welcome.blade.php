@@ -289,6 +289,20 @@
             </div>
         </div>
 
+        <div id="maintenance-modal" class="diet-modal maintenance-modal hidden" aria-hidden="true">
+            <div class="diet-modal-backdrop" id="maintenance-modal-backdrop" aria-hidden="true"></div>
+            <div class="diet-modal-sheet maintenance-modal-sheet" role="dialog" aria-modal="true" aria-labelledby="maintenance-modal-message">
+                <div class="maintenance-modal-body">
+                    <p id="maintenance-modal-message" class="maintenance-modal-message"></p>
+                </div>
+                <div class="diet-modal-footer">
+                    <div class="diet-modal-footer-actions">
+                        <button type="button" id="maintenance-modal-ok" class="btn-diet-footer btn-diet-footer--primary"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
   <section class="website-qr-card" aria-labelledby="website-qr-title">
             <div class="website-qr-copy">
                 <span class="website-qr-kicker" id="website-qr-kicker">امسح الكود</span>
