@@ -313,7 +313,7 @@ async function fetchAvailabilityPayload(dateStr) {
         applyBookingWindowFromPayload(normalized);
         return normalized;
     } catch {
-        return { slots: [] };
+        return { slots: [], load_error: true };
     }
 }
 
@@ -341,9 +341,11 @@ async function renderSlotGrid(dateStr, preserveSelection = false) {
     updateBookingHoursLine(payload.booking_start, payload.booking_end);
     syncGlobalBookingState();
 
-    const blockedDay = !!payload.day_closed || payload.booking_active === false;
+    const blockedDay = !!payload.load_error || !!payload.day_closed || payload.booking_active === false;
 
-    if (payload.day_closed) {
+    if (payload.load_error) {
+        setAvailabilityNotice(i18n[currentLang].availabilityLoadError);
+    } else if (payload.day_closed) {
         setAvailabilityNotice(i18n[currentLang].dayClosed);
     } else if (payload.booking_active === false) {
         setAvailabilityNotice(i18n[currentLang].bookingInactive);
@@ -689,6 +691,7 @@ const i18n = {
         slotBooked: 'موجود',
         bookingHoursLine: 'ساعات الحجز: من :start إلى :end',
         bookingInactive: 'الحجز عبر الموقع متوقف حاليًا. تواصل مع المطعم مباشرة.',
+        availabilityLoadError: 'تعذّر تحميل المواعيد حالياً. حدّث الصفحة أو حاول لاحقاً.',
         dayClosed: 'هذا اليوم مغلق للحجز.',
         dayCapacityFull: 'اكتمل عدد الحجوزات المسموح به لهذا اليوم.',
         slotNoneAvailable: 'لا توجد مواعيد متاحة في هذا اليوم بعد.',
@@ -798,6 +801,7 @@ const i18n = {
         slotBooked: 'Booked',
         bookingHoursLine: 'Booking hours: :start – :end',
         bookingInactive: 'Online booking is currently closed. Please contact the restaurant.',
+        availabilityLoadError: 'Could not load times right now. Refresh the page or try again later.',
         dayClosed: 'This day is closed for booking.',
         dayCapacityFull: 'Maximum reservations for this day have been reached.',
         slotNoneAvailable: 'No open times left for this day.',
