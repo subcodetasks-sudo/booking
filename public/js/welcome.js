@@ -1,4 +1,4 @@
-﻿const STEP2_MAINTENANCE_MODE = true;
+﻿const STEP2_MAINTENANCE_MODE = false;
 
 const step1 = document.getElementById('step-1');
 const step2 = document.getElementById('step-2');
